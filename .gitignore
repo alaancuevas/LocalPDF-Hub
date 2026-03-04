@@ -1,0 +1,21 @@
+# Entornos virtuales
+venv/
+.env
+
+# Carpetas de PyInstaller (No las subas, el EXE se genera local)
+build/
+dist/
+*.spec
+
+# Archivos temporales de procesamiento
+backend/temp/
+temp/
+
+# Caché de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
