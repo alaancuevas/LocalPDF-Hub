@@ -7,14 +7,17 @@ import webbrowser
 import uvicorn
 import pythoncom
 import traceback
+import zipfile
+import io
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from PyPDF2 import PdfMerger, PdfReader, PdfWriter
 from PIL import Image, ImageOps
 from docx2pdf import convert
 from pillow_heif import register_heif_opener
+from typing import List
 
 register_heif_opener()
 
@@ -94,35 +97,59 @@ async def procesar_archivos(background_tasks: BackgroundTasks, archivos: list[Up
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.post("/convertir-word")
-async def convertir_word(archivos: list[UploadFile] = File(...)):
+async def convertir_word(archivos: List[UploadFile] = File(...)):
     pythoncom.CoInitialize()
-    task_id = str(uuid.uuid4())
-    task_dir = os.path.join(BASE_TEMP, task_id)
-    os.makedirs(task_dir)
-    archivo = archivos[0]
-    nombre_ext = archivo.filename.split('.')[-1].lower()
-    nombre_temp = os.path.join(task_dir, f"input.{nombre_ext}")
-    nombre_pdf = os.path.join(task_dir, "output.pdf")
-    resultado_final = os.path.join(BASE_TEMP, f"word_{task_id}.pdf")
+    temp_dir = f"temp_{os.urandom(4).hex()}"
+    temp_path = os.path.join(BASE_TEMP, temp_dir)
+    os.makedirs(temp_path, exist_ok=True)
+    
+    pdf_paths = []
     try:
-        contenido = await archivo.read()
-        with open(nombre_temp, "wb") as f:
-            f.write(contenido)
-        convert(nombre_temp, nombre_pdf)
-        shutil.copy(nombre_pdf, resultado_final)
-        time.sleep(0.5)
-        shutil.rmtree(task_dir, ignore_errors=True)
-        return FileResponse(resultado_final, media_type="application/pdf", filename=f"{archivo.filename.split('.')[0]}.pdf")
+        for archivo in archivos:
+            docx_path = os.path.join(temp_path, archivo.filename)
+            pdf_filename = archivo.filename.rsplit(".", 1)[0] + ".pdf"
+            pdf_path = os.path.join(temp_path, pdf_filename)
+            
+            contenido = await archivo.read()
+            with open(docx_path, "wb") as f:
+                f.write(contenido)
+            
+            convert(docx_path, pdf_path)
+            pdf_paths.append((pdf_filename, pdf_path))
+
+        if len(archivos) == 1:
+            pdf_filename, pdf_path = pdf_paths[0]
+            with open(pdf_path, "rb") as f:
+                pdf_bytes = f.read()
+            shutil.rmtree(temp_path, ignore_errors=True)
+            return StreamingResponse(
+                io.BytesIO(pdf_bytes),
+                media_type="application/pdf",
+                headers={"Content-Disposition": f'attachment; filename="{pdf_filename}"'}
+            )
+            
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            for pdf_filename, pdf_path in pdf_paths:
+                zip_file.write(pdf_path, arcname=pdf_filename)
+                
+        zip_buffer.seek(0)
+        shutil.rmtree(temp_path, ignore_errors=True)
+        
+        return StreamingResponse(
+            zip_buffer, 
+            media_type="application/zip", 
+            headers={"Content-Disposition": "attachment; filename=Documentos_Convertidos.zip"}
+        )
     except Exception as e:
         error_trace = traceback.format_exc()
-        if os.path.exists(task_dir):
-            shutil.rmtree(task_dir, ignore_errors=True)
+        shutil.rmtree(temp_path, ignore_errors=True)
         return JSONResponse(status_code=500, content={"error": str(e), "detalle": error_trace})
     finally:
         pythoncom.CoUninitialize()
 
 @app.post("/dividir-pdf")
-async def dividir_pdf(background_tasks: BackgroundTasks, archivo: UploadFile = File(...), desde: int = Form(...), hasta: int = Form(...)):
+async def dividir_pdf(background_tasks: BackgroundTasks, archivo: UploadFile = File(...), desde: int = Form(1), hasta: int = Form(1), paginas: str = Form(None)):
     task_id = str(uuid.uuid4())
     task_dir = os.path.join(BASE_TEMP, task_id)
     os.makedirs(task_dir)
@@ -135,10 +162,19 @@ async def dividir_pdf(background_tasks: BackgroundTasks, archivo: UploadFile = F
         reader = PdfReader(input_path)
         writer = PdfWriter()
         total_paginas = len(reader.pages)
-        start = max(0, desde - 1)
-        end = min(total_paginas, hasta)
-        for i in range(start, end):
-            writer.add_page(reader.pages[i])
+        
+        if paginas:
+            paginas_list = [int(p.strip()) for p in paginas.split(",") if p.strip().isdigit()]
+            for p in paginas_list:
+                idx = p - 1
+                if 0 <= idx < total_paginas:
+                    writer.add_page(reader.pages[idx])
+        else:
+            start = max(0, desde - 1)
+            end = min(total_paginas, hasta)
+            for i in range(start, end):
+                writer.add_page(reader.pages[i])
+                
         with open(resultado_path, "wb") as f_out:
             writer.write(f_out)
         shutil.rmtree(task_dir, ignore_errors=True)

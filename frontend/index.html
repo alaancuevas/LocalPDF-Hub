@@ -58,6 +58,12 @@
       </div>
       <div class="flex items-center gap-2 justify-end">
         <button
+          id="btnAbout"
+          class="flex items-center justify-center p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+        >
+          <span class="material-symbols-outlined text-[20px]">info</span>
+        </button>
+        <button
           id="btnLanguage"
           class="flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer font-bold text-sm"
         >
@@ -204,15 +210,38 @@
           </div>
         </div>
 
-        <div id="split-settings" class="hidden flex flex-col sm:flex-row items-end gap-4 p-4 bg-white dark:bg-[#1a2235] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-            <div class="flex-1 w-full">
-                <label class="block text-xs font-bold text-slate-500 uppercase mb-2" data-i18n="labelFrom">Desde página:</label>
-                <input type="number" id="split-from" value="1" min="1" class="w-full h-11 px-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-medium focus:border-primary transition-colors outline-none">
-            </div>
-            <div class="flex-1 w-full">
-                <label class="block text-xs font-bold text-slate-500 uppercase mb-2" data-i18n="labelTo">Hasta página:</label>
-                <input type="number" id="split-to" value="1" min="1" class="w-full h-11 px-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-medium focus:border-primary transition-colors outline-none">
-            </div>
+        <div
+          id="split-settings"
+          class="hidden flex flex-col sm:flex-row items-end gap-4 p-4 bg-white dark:bg-[#1a2235] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm"
+        >
+          <div class="flex-1 w-full">
+            <label
+              class="block text-xs font-bold text-slate-500 uppercase mb-2"
+              data-i18n="labelFrom"
+              >Desde página:</label
+            >
+            <input
+              type="number"
+              id="split-from"
+              value="1"
+              min="1"
+              class="w-full h-11 px-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-medium focus:border-primary transition-colors outline-none"
+            />
+          </div>
+          <div class="flex-1 w-full">
+            <label
+              class="block text-xs font-bold text-slate-500 uppercase mb-2"
+              data-i18n="labelTo"
+              >Hasta página:</label
+            >
+            <input
+              type="number"
+              id="split-to"
+              value="1"
+              min="1"
+              class="w-full h-11 px-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-medium focus:border-primary transition-colors outline-none"
+            />
+          </div>
         </div>
 
         <div class="flex flex-col" id="dropAreaContainer">
@@ -250,10 +279,7 @@
             </button>
           </div>
         </div>
-        <div
-          id="fileGrid"
-          class="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4 pt-4"
-        ></div>
+        <div id="fileGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 overflow-y-auto max-h-[60vh] p-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-[#3f4f6b] hover:[&::-webkit-scrollbar-thumb]:bg-slate-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-[#5c708f] [&::-webkit-scrollbar-thumb]:rounded-full">
       </div>
       <footer
         class="fixed bottom-0 left-0 right-0 border-t border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-[#1a2235]/90 backdrop-blur-md z-40 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] transition-colors duration-300"
@@ -286,7 +312,9 @@
               id="btnTransform"
               class="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg h-12 px-8 bg-primary text-white text-base font-bold shadow-md hover:bg-primary/90 hover:shadow-lg transition-all"
             >
-              <span class="material-symbols-outlined text-[20px]">settings_suggest</span>
+              <span class="material-symbols-outlined text-[20px]"
+                >settings_suggest</span
+              >
               <span data-i18n="btnTransformText">Procesar Archivo</span>
             </button>
           </div>
@@ -294,43 +322,134 @@
       </footer>
     </main>
 
-    <div id="view-cargando" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm top-[73px]">
-      <div class="bg-white dark:bg-[#1a2235] rounded-3xl p-10 flex flex-col items-center shadow-2xl max-w-md w-full mx-4 border border-slate-100 dark:border-slate-800 transition-colors duration-300">
+    <main
+      id="view-about"
+      class="hidden flex flex-col items-center justify-center min-h-[70vh] text-center px-4"
+    >
+      <div class="bg-white dark:bg-[#1a2235] p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 max-w-2xl w-full">
+        <span class="material-symbols-outlined text-primary text-[60px] mb-4">volunteer_activism</span>
+        <h2 class="text-3xl font-bold text-slate-800 dark:text-white mb-4" data-i18n="titleAbout"></h2>
+        <p class="text-slate-600 dark:text-slate-400 mb-8 leading-relaxed" data-i18n="descAbout"></p>
+        
+        <div class="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+          <a href="https://link.mercadopago.com.ar/alaancuevas" target="_blank" class="flex items-center justify-center gap-2 bg-[#009EE3] hover:bg-[#0088c4] text-white px-6 py-3 rounded-xl font-bold transition-colors">
+            <span class="material-symbols-outlined">local_cafe</span>
+            <span data-i18n="btnDonateMP"></span>
+          </a>
+          <a href="https://paypal.me/jinji102" target="_blank" class="flex items-center justify-center gap-2 bg-[#003087] hover:bg-[#002266] text-white px-6 py-3 rounded-xl font-bold transition-colors">
+            <span class="material-symbols-outlined">public</span>
+            <span data-i18n="btnDonatePP"></span>
+          </a>
+        </div>
+        
+        <button id="btnBackFromAbout" class="text-primary hover:text-blue-700 dark:hover:text-blue-400 font-medium transition-colors">
+          <span data-i18n="btnBackAbout"></span>
+        </button>
+      </div>
+    </main>
+
+    <div
+      id="view-cargando"
+      class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm top-[73px]"
+    >
+      <div
+        class="bg-white dark:bg-[#1a2235] rounded-3xl p-10 flex flex-col items-center shadow-2xl max-w-md w-full mx-4 border border-slate-100 dark:border-slate-800 transition-colors duration-300"
+      >
         <div class="relative flex items-center justify-center w-40 h-40 mb-8">
           <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-            <circle class="stroke-slate-100 dark:stroke-slate-800" cx="50" cy="50" fill="none" r="45" stroke-width="6"></circle>
-            <circle id="progressCircle" class="stroke-primary transition-all duration-300 ease-out" cx="50" cy="50" fill="none" r="45" stroke-dasharray="282.7" stroke-dashoffset="282.7" stroke-linecap="round" stroke-width="6"></circle>
+            <circle
+              class="stroke-slate-100 dark:stroke-slate-800"
+              cx="50"
+              cy="50"
+              fill="none"
+              r="45"
+              stroke-width="6"
+            ></circle>
+            <circle
+              id="progressCircle"
+              class="stroke-primary transition-all duration-300 ease-out"
+              cx="50"
+              cy="50"
+              fill="none"
+              r="45"
+              stroke-dasharray="282.7"
+              stroke-dashoffset="282.7"
+              stroke-linecap="round"
+              stroke-width="6"
+            ></circle>
           </svg>
-          <span id="progressText" class="absolute text-4xl font-bold text-slate-800 dark:text-white tracking-tight">0%</span>
+          <span
+            id="progressText"
+            class="absolute text-4xl font-bold text-slate-800 dark:text-white tracking-tight"
+            >0%</span
+          >
         </div>
-        <h2 data-i18n="loadingTitle" class="text-2xl font-bold text-slate-900 dark:text-white mb-3 text-center tracking-tight">Procesando...</h2>
-        <p data-i18n="loadingDesc" class="text-slate-500 dark:text-slate-400 text-base text-center leading-relaxed mb-8">Esto puede tardar unos segundos.</p>
-        <div class="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full text-sm font-semibold border border-emerald-100 dark:border-emerald-800">
+        <h2
+          data-i18n="loadingTitle"
+          class="text-2xl font-bold text-slate-900 dark:text-white mb-3 text-center tracking-tight"
+        >
+          Procesando...
+        </h2>
+        <p
+          data-i18n="loadingDesc"
+          class="text-slate-500 dark:text-slate-400 text-base text-center leading-relaxed mb-8"
+        >
+          Esto puede tardar unos segundos.
+        </p>
+        <div
+          class="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full text-sm font-semibold border border-emerald-100 dark:border-emerald-800"
+        >
           <span class="material-symbols-outlined text-[18px]">lock</span>
           <span data-i18n="badgeLoading">Procesamiento 100% Local</span>
         </div>
       </div>
     </div>
 
-    <main id="view-completado" class="hidden flex flex-1 flex-col items-center justify-center w-full p-6 pb-24">
-      <div class="max-w-[600px] w-full flex flex-col items-center text-center gap-8 bg-white dark:bg-[#1a2235] p-10 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors duration-300">
+    <main
+      id="view-completado"
+      class="hidden flex flex-1 flex-col items-center justify-center w-full p-6 pb-24"
+    >
+      <div
+        class="max-w-[600px] w-full flex flex-col items-center text-center gap-8 bg-white dark:bg-[#1a2235] p-10 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors duration-300"
+      >
         <div class="flex flex-col items-center gap-6">
-          <div class="size-24 rounded-full bg-success/10 flex items-center justify-center text-success shadow-[0_0_30px_rgba(16,185,129,0.2)]">
-            <span class="material-symbols-outlined text-[56px]">check_circle</span>
+          <div
+            class="size-24 rounded-full bg-success/10 flex items-center justify-center text-success shadow-[0_0_30px_rgba(16,185,129,0.2)]"
+          >
+            <span class="material-symbols-outlined text-[56px]"
+              >check_circle</span
+            >
           </div>
           <div class="flex flex-col gap-2">
-            <h1 data-i18n="successTitle" class="text-slate-900 dark:text-white tracking-tight text-3xl font-bold leading-tight">¡Tarea completada!</h1>
-            <p data-i18n="successDesc" class="text-slate-500 dark:text-slate-400 text-base font-normal">Tu archivo está listo para ser descargado.</p>
+            <h1
+              data-i18n="successTitle"
+              class="text-slate-900 dark:text-white tracking-tight text-3xl font-bold leading-tight"
+            >
+              ¡Tarea completada!
+            </h1>
+            <p
+              data-i18n="successDesc"
+              class="text-slate-500 dark:text-slate-400 text-base font-normal"
+            >
+              Tu archivo está listo para ser descargado.
+            </p>
           </div>
         </div>
         <div class="flex items-center justify-center w-full">
-          <button class="flex items-center justify-center gap-2 rounded-xl h-14 px-8 bg-primary text-white text-lg font-bold shadow-md hover:bg-primary/90 hover:shadow-lg transition-all w-full sm:w-auto">
+          <button
+            class="flex items-center justify-center gap-2 rounded-xl h-14 px-8 bg-primary text-white text-lg font-bold shadow-md hover:bg-primary/90 hover:shadow-lg transition-all w-full sm:w-auto"
+          >
             <span class="material-symbols-outlined text-[24px]">save</span>
             <span data-i18n="btnSavePdf">Guardar Archivo</span>
           </button>
         </div>
-        <div class="flex flex-col items-center gap-4 pt-6 border-t border-slate-100 dark:border-slate-800 w-full">
-          <button id="btnNewTaskComplete" class="flex items-center justify-center gap-2 text-primary text-sm font-bold hover:underline mt-2">
+        <div
+          class="flex flex-col items-center gap-4 pt-6 border-t border-slate-100 dark:border-slate-800 w-full"
+        >
+          <button
+            id="btnNewTaskComplete"
+            class="flex items-center justify-center gap-2 text-primary text-sm font-bold hover:underline mt-2"
+          >
             <span class="material-symbols-outlined text-[18px]">add</span>
             <span data-i18n="btnNewTask">Iniciar nueva tarea</span>
           </button>
@@ -338,38 +457,71 @@
       </div>
     </main>
 
-    <main id="view-error" class="hidden flex flex-1 flex-col items-center justify-center w-full p-6 pb-24">
-      <div class="max-w-[600px] w-full flex flex-col items-center text-center gap-8 bg-white dark:bg-[#1a2235] p-10 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors duration-300">
+    <main
+      id="view-error"
+      class="hidden flex flex-1 flex-col items-center justify-center w-full p-6 pb-24"
+    >
+      <div
+        class="max-w-[600px] w-full flex flex-col items-center text-center gap-8 bg-white dark:bg-[#1a2235] p-10 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors duration-300"
+      >
         <div class="flex flex-col items-center gap-6">
-          <div class="size-24 rounded-full bg-error/10 flex items-center justify-center text-error shadow-[0_0_30px_rgba(239,68,68,0.2)]">
+          <div
+            class="size-24 rounded-full bg-error/10 flex items-center justify-center text-error shadow-[0_0_30px_rgba(239,68,68,0.2)]"
+          >
             <span class="material-symbols-outlined text-[56px]">error</span>
           </div>
           <div class="flex flex-col gap-2">
             <h1 data-i18n="errorTitle">Algo salió mal</h1>
-            <p data-i18n="errorDesc" class="text-slate-500 dark:text-slate-400 text-base font-normal max-w-[400px] mx-auto">Error procesando los archivos.</p>
+            <p
+              data-i18n="errorDesc"
+              class="text-slate-500 dark:text-slate-400 text-base font-normal max-w-[400px] mx-auto"
+            >
+              Error procesando los archivos.
+            </p>
           </div>
         </div>
-        <div class="flex flex-col sm:flex-row items-center justify-center w-full gap-4 pt-2">
-          <button id="btnTryAgain" class="flex items-center justify-center gap-2 rounded-xl h-14 px-8 bg-primary text-white text-lg font-bold shadow-md hover:bg-primary/90 hover:shadow-lg transition-all w-full sm:w-auto">
+        <div
+          class="flex flex-col sm:flex-row items-center justify-center w-full gap-4 pt-2"
+        >
+          <button
+            id="btnTryAgain"
+            class="flex items-center justify-center gap-2 rounded-xl h-14 px-8 bg-primary text-white text-lg font-bold shadow-md hover:bg-primary/90 hover:shadow-lg transition-all w-full sm:w-auto"
+          >
             <span class="material-symbols-outlined text-[24px]">refresh</span>
             <span data-i18n="btnTryAgain">Intentar de nuevo</span>
           </button>
-          <button id="btnBackToHub" class="flex items-center justify-center gap-2 rounded-xl h-14 px-8 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-lg font-bold shadow-sm hover:bg-slate-200 dark:hover:bg-slate-700 hover:shadow-md transition-all w-full sm:w-auto border border-slate-200 dark:border-slate-700">
+          <button
+            id="btnBackToHub"
+            class="flex items-center justify-center gap-2 rounded-xl h-14 px-8 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-lg font-bold shadow-sm hover:bg-slate-200 dark:hover:bg-slate-700 hover:shadow-md transition-all w-full sm:w-auto border border-slate-200 dark:border-slate-700"
+          >
             <span data-i18n="btnBackHub">Volver al inicio</span>
           </button>
         </div>
       </div>
     </main>
 
-    <footer class="w-full py-8 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-[#1a2235] transition-colors duration-300 mt-auto relative z-30">
+    <footer
+      class="w-full py-8 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-[#1a2235] transition-colors duration-300 mt-auto relative z-30"
+    >
       <div class="max-w-7xl mx-auto px-6 flex flex-col items-center gap-2">
-        <p data-i18n="footerRights" class="text-slate-500 dark:text-slate-400 text-sm font-medium">© 2026 LocalPDF Hub. Derechos para Roy.</p>
-        <p data-i18n="footerPrivacy" class="text-slate-400 dark:text-slate-600 text-xs">Privacidad y velocidad sin salir de tu red local.</p>
+        <p
+          data-i18n="footerRights"
+          class="text-slate-500 dark:text-slate-400 text-sm font-medium"
+        >
+          © 2026 LocalPDF Hub. Derechos para Roy.
+        </p>
+        <p
+          data-i18n="footerPrivacy"
+          class="text-slate-400 dark:text-slate-600 text-xs"
+        >
+          Privacidad y velocidad sin salir de tu red local.
+        </p>
       </div>
     </footer>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
-      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
     </script>
     <script src="js/theme.js"></script>
     <script src="js/i18n.js"></script>

@@ -13,10 +13,26 @@ fileInput.type = 'file';
 fileInput.style.display = 'none';
 document.body.appendChild(fileInput);
 
+window.addEventListener('dragover', (e) => {
+    if (e.dataTransfer && e.dataTransfer.types.includes('Files')) {
+        e.preventDefault();
+    }
+});
+
+window.addEventListener('drop', (e) => {
+    if (e.dataTransfer && e.dataTransfer.types.includes('Files')) {
+        e.preventDefault();
+        const viewProceso = document.getElementById('view-proceso');
+        if (viewProceso && !viewProceso.classList.contains('hidden')) {
+            procesarArchivos(e.dataTransfer.files);
+        }
+    }
+});
+
 dropArea.addEventListener('click', () => {
     if (window.currentTool === 'word-to-pdf') {
         fileInput.accept = '.docx';
-        fileInput.multiple = false;
+        fileInput.multiple = true;
     } else if (window.currentTool === 'split') {
         fileInput.accept = 'application/pdf';
         fileInput.multiple = false;
@@ -52,8 +68,7 @@ async function procesarArchivos(archivos) {
     let filtrados = [];
 
     if (window.currentTool === 'word-to-pdf') {
-        filtrados = listaArchivos.filter(a => a.name.toLowerCase().endsWith('.docx')).slice(0, 1);
-        window.archivosSeleccionados = [];
+        filtrados = listaArchivos.filter(a => a.name.toLowerCase().endsWith('.docx'));
     } else if (window.currentTool === 'split') {
         filtrados = listaArchivos.filter(a => a.type === 'application/pdf').slice(0, 1);
         window.archivosSeleccionados = [];
@@ -99,11 +114,13 @@ async function cargarPaginasParaSplit(archivo) {
 
         const inputFrom = document.getElementById('split-from');
         const inputTo = document.getElementById('split-to');
-        if (inputFrom) {
+        if (inputFrom && inputTo) {
+            inputFrom.disabled = false;
+            inputTo.disabled = false;
+            inputFrom.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-100', 'dark:bg-slate-800');
+            inputTo.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-100', 'dark:bg-slate-800');
             inputFrom.max = numPages;
             inputFrom.value = 1;
-        }
-        if (inputTo) {
             inputTo.max = numPages;
             inputTo.value = numPages;
         }
@@ -131,9 +148,7 @@ async function cargarPaginasParaSplit(archivo) {
                 renderizarGrilla();
             });
         }
-    } catch (error) {
-        console.error(error);
-    }
+    } catch (error) {}
 }
 
 async function generarMiniaturaPDF(archivo, id) {
@@ -198,13 +213,11 @@ function renderizarGrilla() {
         }
 
         div.innerHTML = `
-            ${!item.isSplitView ? `
             <div class="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button class="flex items-center justify-center size-8 rounded-full bg-white/90 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 hover:text-red-500 shadow-sm" onclick="eliminarArchivo('${item.id}')">
                     <span class="material-symbols-outlined text-[18px]">close</span>
                 </button>
             </div>
-            ` : ''}
             <div class="absolute top-2 left-2 z-10">
                 <span class="px-2 py-1 rounded text-xs font-bold ${badgeClass}">${tipoTxt}</span>
             </div>
@@ -229,7 +242,7 @@ function renderizarGrilla() {
         fileGrid.appendChild(div);
     });
 
-    const isSingleFileTool = window.currentTool === 'split' || window.currentTool === 'word-to-pdf';
+    const isSingleFileTool = window.currentTool === 'split';
     
     if (window.archivosSeleccionados.length > 0 && !isSingleFileTool) {
         const addCard = document.createElement('div');
@@ -259,10 +272,37 @@ function dragDrop() {
 
 window.eliminarArchivo = function(id) {
     window.archivosSeleccionados = window.archivosSeleccionados.filter(item => item.id !== id);
+    
+    if (window.currentTool === 'split') {
+        const inputFrom = document.getElementById('split-from');
+        const inputTo = document.getElementById('split-to');
+        if (inputFrom && inputTo) {
+            inputFrom.disabled = true;
+            inputTo.disabled = true;
+            inputFrom.classList.add('opacity-50', 'cursor-not-allowed', 'bg-slate-100', 'dark:bg-slate-800');
+            inputTo.classList.add('opacity-50', 'cursor-not-allowed', 'bg-slate-100', 'dark:bg-slate-800');
+        }
+    }
+    
     renderizarGrilla();
 }
 
-btnClear.addEventListener('click', () => { window.archivosSeleccionados = []; renderizarGrilla(); });
+btnClear.addEventListener('click', () => { 
+    window.archivosSeleccionados = []; 
+    
+    if (window.currentTool === 'split') {
+        const inputFrom = document.getElementById('split-from');
+        const inputTo = document.getElementById('split-to');
+        if (inputFrom && inputTo) {
+            inputFrom.disabled = false;
+            inputTo.disabled = false;
+            inputFrom.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-100', 'dark:bg-slate-800');
+            inputTo.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-100', 'dark:bg-slate-800');
+        }
+    }
+    
+    renderizarGrilla(); 
+});
 
 function actualizarUI() {
     const total = window.archivosSeleccionados.length;

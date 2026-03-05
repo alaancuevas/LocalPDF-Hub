@@ -28,15 +28,23 @@ btnTransformAction.addEventListener('click', async () => {
 
     if (window.currentTool === 'word-to-pdf') {
         endpoint = 'http://127.0.0.1:8000/convertir-word';
-        defaultFileName = "Converted_File.pdf";
-        formData.append('archivos', window.archivosSeleccionados[0].file);
+        window.archivosSeleccionados.forEach(item => {
+            formData.append('archivos', item.file);
+        });
     } 
     else if (window.currentTool === 'split') {
         endpoint = 'http://127.0.0.1:8000/dividir-pdf';
         defaultFileName = "Extracted_Pages.pdf";
         formData.append('archivo', window.archivosSeleccionados[0].file);
-        formData.append('desde', document.getElementById('split-from').value);
-        formData.append('hasta', document.getElementById('split-to').value);
+        
+        const inputFrom = document.getElementById('split-from');
+        if (inputFrom && inputFrom.disabled) {
+            const paginasStr = window.archivosSeleccionados.map(item => item.pageNumber).join(',');
+            formData.append('paginas', paginasStr);
+        } else {
+            formData.append('desde', inputFrom.value);
+            formData.append('hasta', document.getElementById('split-to').value);
+        }
     } 
     else {
         window.archivosSeleccionados.forEach(item => {
@@ -65,10 +73,19 @@ btnTransformAction.addEventListener('click', async () => {
             const newBtn = btnGuardar.cloneNode(true);
             btnGuardar.parentNode.replaceChild(newBtn, btnGuardar);
             
+            let finalDownloadName = defaultFileName;
+            if (window.currentTool === 'word-to-pdf') {
+                if (window.archivosSeleccionados.length > 1) {
+                    finalDownloadName = window.currentLang === 'es' ? "Documentos_Convertidos.zip" : "Converted_Documents.zip";
+                } else {
+                    finalDownloadName = window.archivosSeleccionados[0].file.name.replace(/\.docx$/i, '.pdf');
+                }
+            }
+            
             newBtn.addEventListener('click', () => {
                 const a = document.createElement('a');
                 a.href = downloadUrl;
-                a.download = defaultFileName;
+                a.download = finalDownloadName;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
