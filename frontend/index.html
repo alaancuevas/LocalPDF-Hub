@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
   <head>
     <meta charset="utf-8" />
@@ -116,13 +116,14 @@
               data-i18n="titleMergeCard"
               class="text-slate-900 dark:text-white text-xl font-bold leading-tight"
             >
-              Unir PDF e Imágenes
+              Convertir y Unir
             </h2>
             <p
               data-i18n="descMergeCard"
               class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed"
             >
-              Combina múltiples archivos en un solo documento cohesivo.
+              Convierte imágenes a PDF, une PDFs y combina múltiples archivos en
+              un solo documento.
             </p>
           </div>
         </a>
@@ -138,14 +139,41 @@
           </div>
           <div class="flex flex-col gap-2">
             <h2
+              data-i18n="titleWordCard"
               class="text-slate-900 dark:text-white text-xl font-bold leading-tight"
             >
               Word a PDF
             </h2>
             <p
+              data-i18n="descWordCard"
               class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed"
             >
               Convierte tus documentos .docx a formato PDF de forma local.
+            </p>
+          </div>
+        </a>
+
+        <a
+          id="btnToolSplit"
+          class="group flex flex-col gap-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#1a2235] p-6 hover:border-primary dark:hover:border-primary hover:shadow-lg transition-all duration-300 cursor-pointer"
+        >
+          <div
+            class="h-12 w-12 rounded-lg bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 flex items-center justify-center group-hover:bg-orange-600 dark:group-hover:bg-orange-500 group-hover:text-white transition-colors duration-300"
+          >
+            <span class="material-symbols-outlined text-2xl">call_split</span>
+          </div>
+          <div class="flex flex-col gap-2">
+            <h2
+              data-i18n="titleSplitCard"
+              class="text-slate-900 dark:text-white text-xl font-bold leading-tight"
+            >
+              Dividir PDF
+            </h2>
+            <p
+              data-i18n="descSplitCard"
+              class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed"
+            >
+              Extrae un rango de páginas de tu PDF de forma local.
             </p>
           </div>
         </a>
@@ -159,13 +187,15 @@
         <div class="flex flex-wrap justify-between gap-3 pt-4">
           <div class="flex min-w-72 flex-col gap-2">
             <h1
-              data-i18n="titleProcess"
+              id="processTitleText"
+              data-i18n="titleProcessMerge"
               class="text-slate-900 dark:text-white tracking-tight text-3xl font-bold leading-tight"
             >
               Unir y Reordenar Archivos
             </h1>
             <p
-              data-i18n="descProcess"
+              id="processDescText"
+              data-i18n="descProcessMerge"
               class="text-slate-500 dark:text-slate-400 text-base font-normal leading-normal"
             >
               Arrastra y suelta para reorganizar tus archivos. Todo el
@@ -173,6 +203,18 @@
             </p>
           </div>
         </div>
+
+        <div id="split-settings" class="hidden flex flex-col sm:flex-row items-end gap-4 p-4 bg-white dark:bg-[#1a2235] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div class="flex-1 w-full">
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2" data-i18n="labelFrom">Desde página:</label>
+                <input type="number" id="split-from" value="1" min="1" class="w-full h-11 px-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-medium focus:border-primary transition-colors outline-none">
+            </div>
+            <div class="flex-1 w-full">
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2" data-i18n="labelTo">Hasta página:</label>
+                <input type="number" id="split-to" value="1" min="1" class="w-full h-11 px-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-medium focus:border-primary transition-colors outline-none">
+            </div>
+        </div>
+
         <div class="flex flex-col" id="dropAreaContainer">
           <div
             id="dropArea"
@@ -244,117 +286,51 @@
               id="btnTransform"
               class="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg h-12 px-8 bg-primary text-white text-base font-bold shadow-md hover:bg-primary/90 hover:shadow-lg transition-all"
             >
-              <span class="material-symbols-outlined text-[20px]">merge</span>
-              <span data-i18n="btnTransformText">Transformar y Unir</span>
+              <span class="material-symbols-outlined text-[20px]">settings_suggest</span>
+              <span data-i18n="btnTransformText">Procesar Archivo</span>
             </button>
           </div>
         </div>
       </footer>
     </main>
 
-    <div
-      id="view-cargando"
-      class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm top-[73px]"
-    >
-      <div
-        class="bg-white dark:bg-[#1a2235] rounded-3xl p-10 flex flex-col items-center shadow-2xl max-w-md w-full mx-4 border border-slate-100 dark:border-slate-800 transition-colors duration-300"
-      >
+    <div id="view-cargando" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm top-[73px]">
+      <div class="bg-white dark:bg-[#1a2235] rounded-3xl p-10 flex flex-col items-center shadow-2xl max-w-md w-full mx-4 border border-slate-100 dark:border-slate-800 transition-colors duration-300">
         <div class="relative flex items-center justify-center w-40 h-40 mb-8">
           <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-            <circle
-              class="stroke-slate-100 dark:stroke-slate-800"
-              cx="50"
-              cy="50"
-              fill="none"
-              r="45"
-              stroke-width="6"
-            ></circle>
-            <circle
-              id="progressCircle"
-              class="stroke-primary transition-all duration-300 ease-out"
-              cx="50"
-              cy="50"
-              fill="none"
-              r="45"
-              stroke-dasharray="282.7"
-              stroke-dashoffset="282.7"
-              stroke-linecap="round"
-              stroke-width="6"
-            ></circle>
+            <circle class="stroke-slate-100 dark:stroke-slate-800" cx="50" cy="50" fill="none" r="45" stroke-width="6"></circle>
+            <circle id="progressCircle" class="stroke-primary transition-all duration-300 ease-out" cx="50" cy="50" fill="none" r="45" stroke-dasharray="282.7" stroke-dashoffset="282.7" stroke-linecap="round" stroke-width="6"></circle>
           </svg>
-          <span
-            id="progressText"
-            class="absolute text-4xl font-bold text-slate-800 dark:text-white tracking-tight"
-            >0%</span
-          >
+          <span id="progressText" class="absolute text-4xl font-bold text-slate-800 dark:text-white tracking-tight">0%</span>
         </div>
-        <h2
-          data-i18n="loadingTitle"
-          class="text-2xl font-bold text-slate-900 dark:text-white mb-3 text-center tracking-tight"
-        >
-          Uniendo archivos localmente...
-        </h2>
-        <p
-          data-i18n="loadingDesc"
-          class="text-slate-500 dark:text-slate-400 text-base text-center leading-relaxed mb-8"
-        >
-          Esto puede tardar unos segundos dependiendo del tamaño de los
-          archivos.
-        </p>
-        <div
-          class="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full text-sm font-semibold border border-emerald-100 dark:border-emerald-800"
-        >
+        <h2 data-i18n="loadingTitle" class="text-2xl font-bold text-slate-900 dark:text-white mb-3 text-center tracking-tight">Procesando...</h2>
+        <p data-i18n="loadingDesc" class="text-slate-500 dark:text-slate-400 text-base text-center leading-relaxed mb-8">Esto puede tardar unos segundos.</p>
+        <div class="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full text-sm font-semibold border border-emerald-100 dark:border-emerald-800">
           <span class="material-symbols-outlined text-[18px]">lock</span>
           <span data-i18n="badgeLoading">Procesamiento 100% Local</span>
         </div>
       </div>
     </div>
 
-    <main
-      id="view-completado"
-      class="hidden flex flex-1 flex-col items-center justify-center w-full p-6 pb-24"
-    >
-      <div
-        class="max-w-[600px] w-full flex flex-col items-center text-center gap-8 bg-white dark:bg-[#1a2235] p-10 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors duration-300"
-      >
+    <main id="view-completado" class="hidden flex flex-1 flex-col items-center justify-center w-full p-6 pb-24">
+      <div class="max-w-[600px] w-full flex flex-col items-center text-center gap-8 bg-white dark:bg-[#1a2235] p-10 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors duration-300">
         <div class="flex flex-col items-center gap-6">
-          <div
-            class="size-24 rounded-full bg-success/10 flex items-center justify-center text-success shadow-[0_0_30px_rgba(16,185,129,0.2)]"
-          >
-            <span class="material-symbols-outlined text-[56px]"
-              >check_circle</span
-            >
+          <div class="size-24 rounded-full bg-success/10 flex items-center justify-center text-success shadow-[0_0_30px_rgba(16,185,129,0.2)]">
+            <span class="material-symbols-outlined text-[56px]">check_circle</span>
           </div>
           <div class="flex flex-col gap-2">
-            <h1
-              data-i18n="successTitle"
-              class="text-slate-900 dark:text-white tracking-tight text-3xl font-bold leading-tight"
-            >
-              ¡Archivos unidos con éxito!
-            </h1>
-            <p
-              data-i18n="successDesc"
-              class="text-slate-500 dark:text-slate-400 text-base font-normal"
-            >
-              Tus documentos están listos para ser descargados.
-            </p>
+            <h1 data-i18n="successTitle" class="text-slate-900 dark:text-white tracking-tight text-3xl font-bold leading-tight">¡Tarea completada!</h1>
+            <p data-i18n="successDesc" class="text-slate-500 dark:text-slate-400 text-base font-normal">Tu archivo está listo para ser descargado.</p>
           </div>
         </div>
         <div class="flex items-center justify-center w-full">
-          <button
-            class="flex items-center justify-center gap-2 rounded-xl h-14 px-8 bg-primary text-white text-lg font-bold shadow-md hover:bg-primary/90 hover:shadow-lg transition-all w-full sm:w-auto"
-          >
+          <button class="flex items-center justify-center gap-2 rounded-xl h-14 px-8 bg-primary text-white text-lg font-bold shadow-md hover:bg-primary/90 hover:shadow-lg transition-all w-full sm:w-auto">
             <span class="material-symbols-outlined text-[24px]">save</span>
-            <span data-i18n="btnSavePdf">Guardar PDF</span>
+            <span data-i18n="btnSavePdf">Guardar Archivo</span>
           </button>
         </div>
-        <div
-          class="flex flex-col items-center gap-4 pt-6 border-t border-slate-100 dark:border-slate-800 w-full"
-        >
-          <button
-            id="btnNewTaskComplete"
-            class="flex items-center justify-center gap-2 text-primary text-sm font-bold hover:underline mt-2"
-          >
+        <div class="flex flex-col items-center gap-4 pt-6 border-t border-slate-100 dark:border-slate-800 w-full">
+          <button id="btnNewTaskComplete" class="flex items-center justify-center gap-2 text-primary text-sm font-bold hover:underline mt-2">
             <span class="material-symbols-outlined text-[18px]">add</span>
             <span data-i18n="btnNewTask">Iniciar nueva tarea</span>
           </button>
@@ -362,71 +338,38 @@
       </div>
     </main>
 
-    <main
-      id="view-error"
-      class="hidden flex flex-1 flex-col items-center justify-center w-full p-6 pb-24"
-    >
-      <div
-        class="max-w-[600px] w-full flex flex-col items-center text-center gap-8 bg-white dark:bg-[#1a2235] p-10 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors duration-300"
-      >
+    <main id="view-error" class="hidden flex flex-1 flex-col items-center justify-center w-full p-6 pb-24">
+      <div class="max-w-[600px] w-full flex flex-col items-center text-center gap-8 bg-white dark:bg-[#1a2235] p-10 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors duration-300">
         <div class="flex flex-col items-center gap-6">
-          <div
-            class="size-24 rounded-full bg-error/10 flex items-center justify-center text-error shadow-[0_0_30px_rgba(239,68,68,0.2)]"
-          >
+          <div class="size-24 rounded-full bg-error/10 flex items-center justify-center text-error shadow-[0_0_30px_rgba(239,68,68,0.2)]">
             <span class="material-symbols-outlined text-[56px]">error</span>
           </div>
           <div class="flex flex-col gap-2">
-            <h1
-              data-i18n="errorTitle"
-              class="text-slate-900 dark:text-white tracking-tight text-3xl font-bold leading-tight"
-            >
-              Algo salió mal
-            </h1>
-            <p
-              data-i18n="errorDesc"
-              class="text-slate-500 dark:text-slate-400 text-base font-normal max-w-[400px] mx-auto"
-            >
-              Error procesando los archivos. Verifica los formatos e intenta
-              nuevamente.
-            </p>
+            <h1 data-i18n="errorTitle">Algo salió mal</h1>
+            <p data-i18n="errorDesc" class="text-slate-500 dark:text-slate-400 text-base font-normal max-w-[400px] mx-auto">Error procesando los archivos.</p>
           </div>
         </div>
-        <div
-          class="flex flex-col sm:flex-row items-center justify-center w-full gap-4 pt-2"
-        >
-          <button
-            id="btnTryAgain"
-            class="flex items-center justify-center gap-2 rounded-xl h-14 px-8 bg-primary text-white text-lg font-bold shadow-md hover:bg-primary/90 hover:shadow-lg transition-all w-full sm:w-auto"
-          >
+        <div class="flex flex-col sm:flex-row items-center justify-center w-full gap-4 pt-2">
+          <button id="btnTryAgain" class="flex items-center justify-center gap-2 rounded-xl h-14 px-8 bg-primary text-white text-lg font-bold shadow-md hover:bg-primary/90 hover:shadow-lg transition-all w-full sm:w-auto">
             <span class="material-symbols-outlined text-[24px]">refresh</span>
             <span data-i18n="btnTryAgain">Intentar de nuevo</span>
           </button>
-          <button
-            id="btnBackToHub"
-            class="flex items-center justify-center gap-2 rounded-xl h-14 px-8 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-lg font-bold shadow-sm hover:bg-slate-200 dark:hover:bg-slate-700 hover:shadow-md transition-all w-full sm:w-auto border border-slate-200 dark:border-slate-700"
-          >
+          <button id="btnBackToHub" class="flex items-center justify-center gap-2 rounded-xl h-14 px-8 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-lg font-bold shadow-sm hover:bg-slate-200 dark:hover:bg-slate-700 hover:shadow-md transition-all w-full sm:w-auto border border-slate-200 dark:border-slate-700">
             <span data-i18n="btnBackHub">Volver al inicio</span>
           </button>
         </div>
       </div>
     </main>
 
-    <footer
-      class="w-full py-8 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-[#1a2235] transition-colors duration-300 mt-auto relative z-30"
-    >
+    <footer class="w-full py-8 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-[#1a2235] transition-colors duration-300 mt-auto relative z-30">
       <div class="max-w-7xl mx-auto px-6 flex flex-col items-center gap-2">
-        <p class="text-slate-500 dark:text-slate-400 text-sm font-medium">
-          © 2026 LocalPDF Hub. Derechos para Roy.
-        </p>
-        <p class="text-slate-400 dark:text-slate-600 text-xs">
-          Privacidad y velocidad sin salir de tu red local.
-        </p>
+        <p data-i18n="footerRights" class="text-slate-500 dark:text-slate-400 text-sm font-medium">© 2026 LocalPDF Hub. Derechos para Roy.</p>
+        <p data-i18n="footerPrivacy" class="text-slate-400 dark:text-slate-600 text-xs">Privacidad y velocidad sin salir de tu red local.</p>
       </div>
     </footer>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
-      pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
     </script>
     <script src="js/theme.js"></script>
     <script src="js/i18n.js"></script>

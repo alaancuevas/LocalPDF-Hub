@@ -10,15 +10,19 @@ const btnClear = document.getElementById('btnClear');
 
 const fileInput = document.createElement('input');
 fileInput.type = 'file';
-fileInput.multiple = true;
 fileInput.style.display = 'none';
 document.body.appendChild(fileInput);
 
 dropArea.addEventListener('click', () => {
     if (window.currentTool === 'word-to-pdf') {
         fileInput.accept = '.docx';
+        fileInput.multiple = false;
+    } else if (window.currentTool === 'split') {
+        fileInput.accept = 'application/pdf';
+        fileInput.multiple = false;
     } else {
         fileInput.accept = 'application/pdf, image/png, image/jpeg, image/jpg, .heic, .heif, .jfif, .jif';
+        fileInput.multiple = true;
     }
     fileInput.click();
 });
@@ -48,7 +52,15 @@ async function procesarArchivos(archivos) {
     let filtrados = [];
 
     if (window.currentTool === 'word-to-pdf') {
-        filtrados = listaArchivos.filter(a => a.name.toLowerCase().endsWith('.docx'));
+        filtrados = listaArchivos.filter(a => a.name.toLowerCase().endsWith('.docx')).slice(0, 1);
+        window.archivosSeleccionados = [];
+    } else if (window.currentTool === 'split') {
+        filtrados = listaArchivos.filter(a => a.type === 'application/pdf').slice(0, 1);
+        window.archivosSeleccionados = [];
+        if (filtrados.length > 0) {
+            cargarPaginasParaSplit(filtrados[0]);
+            return;
+        }
     } else {
         filtrados = listaArchivos.filter(a => 
             a.type.match('image.*') || 
@@ -79,6 +91,51 @@ async function procesarArchivos(archivos) {
     }
 }
 
+async function cargarPaginasParaSplit(archivo) {
+    try {
+        const arrayBuffer = await archivo.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const numPages = pdf.numPages;
+
+        const inputFrom = document.getElementById('split-from');
+        const inputTo = document.getElementById('split-to');
+        if (inputFrom) {
+            inputFrom.max = numPages;
+            inputFrom.value = 1;
+        }
+        if (inputTo) {
+            inputTo.max = numPages;
+            inputTo.value = numPages;
+        }
+
+        for (let i = 1; i <= numPages; i++) {
+            const id = Math.random().toString(36).substring(7);
+            const item = {
+                file: archivo,
+                id: id,
+                url: null,
+                pageNumber: i,
+                isSplitView: true
+            };
+            window.archivosSeleccionados.push(item);
+            renderizarGrilla();
+
+            pdf.getPage(i).then(async (page) => {
+                const viewport = page.getViewport({ scale: 0.5 });
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                await page.render({ canvasContext: context, viewport: viewport }).promise;
+                item.url = canvas.toDataURL('image/jpeg', 0.8);
+                renderizarGrilla();
+            });
+        }
+    } catch (error) {
+        console.error(error);
+    }
+}
+
 async function generarMiniaturaPDF(archivo, id) {
     try {
         const arrayBuffer = await archivo.arrayBuffer();
@@ -96,36 +153,58 @@ async function generarMiniaturaPDF(archivo, id) {
             item.url = dataUrl;
             renderizarGrilla();
         }
-    } catch (error) { console.error("Error miniatura:", error); }
+    } catch (error) {}
 }
 
 function renderizarGrilla() {
     fileGrid.innerHTML = '';
     
+    let txtBadge = "PÁG";
+    let txtTitle = "Página";
+    
+    if (window.translations && window.currentLang) {
+        txtBadge = window.translations[window.currentLang].badgePage || "PÁG";
+        txtTitle = window.translations[window.currentLang].titlePage || "Página";
+    }
+    
     window.archivosSeleccionados.forEach((item, index) => {
         const div = document.createElement('div');
-        div.className = 'group relative flex flex-col bg-white dark:bg-[#1a2235] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow overflow-hidden cursor-move';
-        div.draggable = true;
+        div.className = 'group relative flex flex-col bg-white dark:bg-[#1a2235] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow overflow-hidden';
+        
+        if (!item.isSplitView) {
+            div.draggable = true;
+            div.classList.add('cursor-move');
+        }
+
         div.setAttribute('data-index', index);
         
         let badgeClass = 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
         let tipoTxt = 'FILE';
-        const ext = item.file.name.split('.').pop().toUpperCase();
+        let tituloArchivo = item.file.name;
         
-        if (item.file.type === 'application/pdf') {
-            badgeClass = 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
-            tipoTxt = 'PDF';
-        } else if (item.file.type.includes('image') || ['HEIC', 'HEIF', 'JFIF', 'JIF'].includes(ext)) {
-            badgeClass = 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
-            tipoTxt = ext;
+        if (item.isSplitView) {
+            badgeClass = 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400';
+            tipoTxt = `${txtBadge} ${item.pageNumber}`;
+            tituloArchivo = `${txtTitle} ${item.pageNumber}`;
+        } else {
+            const ext = item.file.name.split('.').pop().toUpperCase();
+            if (item.file.type === 'application/pdf') {
+                badgeClass = 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+                tipoTxt = 'PDF';
+            } else if (item.file.type.includes('image') || ['HEIC', 'HEIF', 'JFIF', 'JIF'].includes(ext)) {
+                badgeClass = 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+                tipoTxt = ext;
+            }
         }
 
         div.innerHTML = `
+            ${!item.isSplitView ? `
             <div class="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button class="flex items-center justify-center size-8 rounded-full bg-white/90 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 hover:text-red-500 shadow-sm" onclick="eliminarArchivo('${item.id}')">
                     <span class="material-symbols-outlined text-[18px]">close</span>
                 </button>
             </div>
+            ` : ''}
             <div class="absolute top-2 left-2 z-10">
                 <span class="px-2 py-1 rounded text-xs font-bold ${badgeClass}">${tipoTxt}</span>
             </div>
@@ -134,21 +213,25 @@ function renderizarGrilla() {
                 ${!item.url ? `<span class="material-symbols-outlined text-[40px] text-slate-300">description</span>` : ''}
             </div>
             <div class="p-3 bg-white dark:bg-[#1a2235] flex items-center justify-between pointer-events-none">
-                <p class="text-slate-700 dark:text-slate-300 text-sm font-medium truncate pr-2">${item.file.name}</p>
-                <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-[18px]">drag_indicator</span>
+                <p class="text-slate-700 dark:text-slate-300 text-sm font-medium truncate pr-2">${tituloArchivo}</p>
+                ${!item.isSplitView ? `<span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-[18px]">drag_indicator</span>` : ''}
             </div>
         `;
         
-        div.addEventListener('dragstart', dragStart);
-        div.addEventListener('dragover', dragOver);
-        div.addEventListener('drop', dragDrop);
-        div.addEventListener('dragenter', dragEnter);
-        div.addEventListener('dragleave', dragLeave);
+        if (!item.isSplitView) {
+            div.addEventListener('dragstart', dragStart);
+            div.addEventListener('dragover', dragOver);
+            div.addEventListener('drop', dragDrop);
+            div.addEventListener('dragenter', dragEnter);
+            div.addEventListener('dragleave', dragLeave);
+        }
+        
         fileGrid.appendChild(div);
     });
 
-    // Solo agregar la tarjeta si hay al menos un archivo
-    if (window.archivosSeleccionados.length > 0) {
+    const isSingleFileTool = window.currentTool === 'split' || window.currentTool === 'word-to-pdf';
+    
+    if (window.archivosSeleccionados.length > 0 && !isSingleFileTool) {
         const addCard = document.createElement('div');
         addCard.className = 'flex flex-col items-center justify-center bg-white/5 dark:bg-[#1a2235]/50 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-primary dark:hover:border-primary transition-all cursor-pointer aspect-[3/4] group';
         addCard.onclick = () => fileInput.click();

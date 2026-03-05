@@ -22,13 +22,27 @@ btnTransformAction.addEventListener('click', async () => {
     if (window.archivosSeleccionados.length === 0) return;
 
     const formData = new FormData();
-    window.archivosSeleccionados.forEach(item => {
-        formData.append('archivos', item.file);
-    });
+    
+    let endpoint = 'http://127.0.0.1:8000/procesar';
+    let defaultFileName = "Merged_Document.pdf";
 
-    const endpoint = window.currentTool === 'word-to-pdf' 
-        ? 'http://127.0.0.1:8000/convertir-word' 
-        : 'http://127.0.0.1:8000/procesar';
+    if (window.currentTool === 'word-to-pdf') {
+        endpoint = 'http://127.0.0.1:8000/convertir-word';
+        defaultFileName = "Converted_File.pdf";
+        formData.append('archivos', window.archivosSeleccionados[0].file);
+    } 
+    else if (window.currentTool === 'split') {
+        endpoint = 'http://127.0.0.1:8000/dividir-pdf';
+        defaultFileName = "Extracted_Pages.pdf";
+        formData.append('archivo', window.archivosSeleccionados[0].file);
+        formData.append('desde', document.getElementById('split-from').value);
+        formData.append('hasta', document.getElementById('split-to').value);
+    } 
+    else {
+        window.archivosSeleccionados.forEach(item => {
+            formData.append('archivos', item.file);
+        });
+    }
     
     showView(viewCargando);
     startSimulatedProgress();
@@ -47,7 +61,6 @@ btnTransformAction.addEventListener('click', async () => {
             const blob = await response.blob();
             const downloadUrl = URL.createObjectURL(blob);
 
-            // Configuramos el botón de descarga
             const btnGuardar = document.querySelector('#view-completado button');
             const newBtn = btnGuardar.cloneNode(true);
             btnGuardar.parentNode.replaceChild(newBtn, btnGuardar);
@@ -55,18 +68,16 @@ btnTransformAction.addEventListener('click', async () => {
             newBtn.addEventListener('click', () => {
                 const a = document.createElement('a');
                 a.href = downloadUrl;
-                a.download = window.currentTool === 'word-to-pdf' ? "documento.pdf" : "unido.pdf";
+                a.download = defaultFileName;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
             });
 
-            // --- LIMPIEZA AUTOMÁTICA ---
             window.archivosSeleccionados = []; 
             if (typeof renderizarGrilla === "function") {
                 renderizarGrilla(); 
             }
-            // ---------------------------
 
             setTimeout(() => {
                 showView(viewCompletado);
