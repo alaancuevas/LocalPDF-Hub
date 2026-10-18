@@ -1,4 +1,4 @@
-# LocalPDF Hub
+<h1><img src="docs/icon.png" alt="" width="48" height="48" align="absmiddle"> LocalPDF Hub</h1>
 
 Herramientas de PDF que funcionan en tu propia computadora: unir, dividir,
 comprimir, proteger y convertir, sin subir tus archivos a ningún lado.

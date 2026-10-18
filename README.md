@@ -1,4 +1,4 @@
-# LocalPDF Hub
+<h1><img src="docs/icon.png" alt="" width="48" height="48" align="absmiddle"> LocalPDF Hub</h1>
 
 PDF tools that run on your own computer: merge, split, compress, protect
 and convert, without uploading your files anywhere.
