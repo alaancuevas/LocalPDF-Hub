@@ -10,19 +10,36 @@ async function pdfjs() {
   return library;
 }
 
-/** Number of pages, 1 for an image, or null when it cannot be read (e.g. a password). */
-export async function pageCount(file) {
-  if (!file.name.toLowerCase().endsWith(".pdf")) return 1;
+/**
+ * Opens a file once to learn what it is.
+ *   ok       opens (an image counts as one page)
+ *   locked   needs a password to open (pdf.js NEED_PASSWORD)
+ *   wrong    the password given is not correct (INCORRECT_PASSWORD)
+ *   damaged  pdf.js says it is not a PDF it can read (InvalidPDFException)
+ *   aborted  the file was replaced while it opened; nobody is waiting
+ *   unknown  anything else, e.g. the worker ran out of memory: the server decides
+ */
+export async function probe(file, password) {
+  if (!file.name.toLowerCase().endsWith(".pdf")) return { state: "ok", pages: 1 };
   const lib = await pdfjs();
-  const task = lib.getDocument({ data: await file.arrayBuffer() });
+  const task = lib.getDocument({ data: await file.arrayBuffer(), password });
   try {
-    return (await task.promise).numPages;
-  } catch {
-    return null;
+    return { state: "ok", pages: (await task.promise).numPages };
+  } catch (error) {
+    return { state: classify(lib, error), pages: null };
   } finally {
     // In pdf.js 4+ the loading task, not the document, frees the worker memory.
     task.destroy();
   }
+}
+
+function classify(lib, error) {
+  if (error?.name === "PasswordException") {
+    return error.code === lib.PasswordResponses.INCORRECT_PASSWORD ? "wrong" : "locked";
+  }
+  if (error?.name === "InvalidPDFException") return "damaged";
+  if (error?.name === "AbortException") return "aborted";
+  return "unknown";
 }
 
 /**

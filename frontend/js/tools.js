@@ -29,12 +29,14 @@ export const TOOLS = {
     icon: "lock-simple",
     endpoint: "protect",
     accepts: PDF,
+    takesPassword: true,
     fields: [{ name: "password", label: "optionPassword", type: "password", required: true }],
   },
   unlock: {
     icon: "lock-simple-open",
     endpoint: "unlock",
     accepts: PDF,
+    takesPassword: true,
     fields: [{ name: "password", label: "optionPassword", type: "password", required: true }],
   },
   watermark: {

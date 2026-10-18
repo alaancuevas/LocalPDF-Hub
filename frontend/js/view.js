@@ -4,7 +4,8 @@ import { ApiError, runTool } from "./api.js";
 import { t } from "./i18n.js";
 import { icon } from "./icons.js";
 import { pageGrid } from "./pagegrid.js";
-import { openPages, pageCount } from "./pages.js";
+import { openPages, probe } from "./pages.js";
+import { askPasswords } from "./passwords.js";
 import { formatRanges, parseRanges } from "./ranges.js";
 import { accepts } from "./tools.js";
 
@@ -39,7 +40,11 @@ export function renderTool(root, id, tool, announce) {
       state.grid?.sync();
       draw();
     },
-    destroy: closePages,
+    // Leaving the tool drops the open PDF and any password typed for it.
+    destroy: () => {
+      closePages();
+      for (const entry of state.files) entry.password = null;
+    },
   };
 
   function draw(focusSelector) {
@@ -105,8 +110,10 @@ export function renderTool(root, id, tool, announce) {
     const list = el("ul", "files");
     state.files.forEach((entry, index) => {
       const row = el("li", "file");
+      entry.row = row;
       entry.meta = el("span", "meta", fileMeta(entry));
-      row.append(icon(kindIcon(entry.file)), el("span", "file-name", entry.file.name), entry.meta);
+      row.classList.toggle("is-locked", Boolean(entry.locked));
+      row.append(icon(entry.locked ? "lock-simple" : kindIcon(entry.file)), el("span", "file-name", entry.file.name), entry.meta);
 
       const actions = el("span", "row-actions");
       if (tool.multiple && state.files.length > 1) {
@@ -173,6 +180,8 @@ export function renderTool(root, id, tool, announce) {
 
   function canRun() {
     if (!state.files.length || state.status === "working") return false;
+    // The action asks for the passwords first.
+    if (state.files.some((entry) => entry.locked)) return true;
     if (tool.pagePicker === "rotate") return state.angles.some((angle) => angle !== 0);
     if (tool.pagePicker === "select" && state.grid) return state.selected.size > 0;
     return true;
@@ -191,8 +200,17 @@ export function renderTool(root, id, tool, announce) {
     updateFoot();
   }
 
-  function loadPages(entry) {
+  async function loadPages(entry) {
     closePages();
+    const { state: kind } = await probe(entry.file);
+    if (state.files[0] !== entry || kind === "aborted") return;
+    if (kind === "damaged") return rejectDamaged(entry);
+    if (kind === "locked") {
+      entry.locked = true;
+      draw();
+      // The thumbnails need the password, so it is asked for right away.
+      if (!(await askPasswords([entry], tooBig)) || state.files[0] !== entry) return;
+    }
     openPages(entry.file).then((doc) => {
       // A newer file may have replaced this one while it was opening.
       if (state.files[0] !== entry) {
@@ -230,8 +248,71 @@ export function renderTool(root, id, tool, announce) {
     const actions = el("div", "result-actions");
     actions.append(link, again);
     panel.append(actions);
+    panel.append(...passwordNotice());
     queueMicrotask(() => link.focus());
     return panel;
+  }
+
+  // What the result panel says when a file was opened with its password.
+  function passwordNotice() {
+    if (state.result.protected) return [el("p", "result-note", t("protectedAgain"))];
+    const opened = state.files.filter((entry) => entry.password);
+    if (!opened.length) return [];
+    // /protect takes PDFs only; a ZIP or DOCX just gets an honest note.
+    if (!state.result.name.toLowerCase().endsWith(".pdf")) return [el("p", "result-note", t("resultUnlockedOther"))];
+    const several = new Set(opened.map((entry) => entry.password)).size > 1;
+    const label = several ? t("protectAgainFrom", { name: opened[0].file.name }) : t("protectAgain");
+    const button = el("button", "secondary", label);
+    button.type = "button";
+    button.addEventListener("click", () => protectResult(button, opened[0].password));
+    const nodes = [el("p", "result-note", t("resultUnlockedPdf")), button, el("p", "result-hint", t("protectAgainHint"))];
+    if (state.result.error) nodes.push(el("p", "message is-error", state.result.error));
+    return nodes;
+  }
+
+  async function protectResult(button, password) {
+    button.disabled = true;
+    const body = new FormData();
+    body.append("file", state.result.blob, state.result.name);
+    body.append("password", password);
+    try {
+      const { blob } = await runTool("protect", body);
+      URL.revokeObjectURL(state.result.url);
+      state.result = { url: URL.createObjectURL(blob), name: state.result.name, blob, protected: true };
+      for (const entry of state.files) entry.password = null;
+      announce(t("protectedAgain"));
+    } catch (error) {
+      state.result.error = t(`error.${error instanceof ApiError ? error.code : "ERR_INTERNAL"}`);
+    }
+    draw();
+  }
+
+  // Limits for the unlocked copy, which can be larger than the locked file.
+  function tooBig(entry, size) {
+    if (size > MAX_BYTES) return t("unlockedTooBig", { name: entry.file.name });
+    if (tool.multiple && totalBytes() - entry.file.size + size > MAX_BYTES) return t("unlockedTooBigTotal");
+    return "";
+  }
+
+  function rejectDamaged(entry) {
+    state.files.splice(state.files.indexOf(entry), 1);
+    state.message = t("rejectedDamaged", { name: entry.file.name });
+    draw();
+  }
+
+  // Applies what opening the file showed, in place, so a field being typed keeps its focus.
+  function settle(entry, kind, pages) {
+    if (!state.files.includes(entry) || kind === "aborted") return;
+    if (kind === "damaged") return rejectDamaged(entry);
+    // Protect and Unlock take the password in their own field.
+    entry.locked = kind === "locked" && !tool.takesPassword;
+    entry.pages = pages;
+    if (entry.locked && entry.row) {
+      entry.row.classList.add("is-locked");
+      entry.row.firstElementChild.replaceWith(icon("lock-simple"));
+    }
+    if (entry.meta) entry.meta.textContent = fileMeta(entry);
+    if (state.summary) updateFoot();
   }
 
   function addFiles(files) {
@@ -262,12 +343,8 @@ export function renderTool(root, id, tool, announce) {
         loadPages(entry);
         continue;
       }
-      // Counting pages can take a moment; only the affected texts are updated.
-      pageCount(file).then((pages) => {
-        entry.pages = pages;
-        if (entry.meta) entry.meta.textContent = fileMeta(entry);
-        if (state.summary) state.summary.textContent = summary();
-      });
+      // Opening the file can take a moment; only the affected row is updated.
+      probe(file).then(({ state: kind, pages }) => settle(entry, kind, pages));
     }
     draw();
   }
@@ -309,6 +386,14 @@ export function renderTool(root, id, tool, announce) {
 
   async function run() {
     if (!form.reportValidity()) return;
+    const locked = state.files.filter((entry) => entry.locked);
+    if (locked.length) {
+      const opened = await askPasswords(locked, tooBig);
+      draw();
+      if (!opened) return;
+      // Split and Rotate need the pages of the opened file before they can run.
+      if (tool.pagePicker) return loadPages(state.files[0]);
+    }
     const body = new FormData();
     const fileField = tool.multiple ? "files" : "file";
     for (const entry of state.files) body.append(fileField, entry.file, entry.file.name);
@@ -323,7 +408,7 @@ export function renderTool(root, id, tool, announce) {
     announce(t("working"));
     try {
       const { blob, name } = await runTool(tool.endpoint, body);
-      state.result = { url: URL.createObjectURL(blob), name };
+      state.result = { url: URL.createObjectURL(blob), name, blob };
       state.status = "done";
       announce(t("doneTitle"));
     } catch (error) {
@@ -378,6 +463,7 @@ function kindIcon(file) {
 
 function fileMeta(entry) {
   const parts = [formatSize(entry.file.size)];
+  if (entry.locked) parts.unshift(t("lockedMeta"));
   if (typeof entry.pages === "number") parts.unshift(entry.pages === 1 ? t("page") : t("pages", { count: entry.pages }));
   if (entry.rotation) parts.push(t("rotated", { angle: entry.rotation }));
   return parts.join(" · ");

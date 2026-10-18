@@ -582,6 +582,35 @@ dialog form {
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.dialog-note {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.field-error {
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--danger);
+}
+
+/* A PDF that needs its password before the tool can open it */
+.file.is-locked > .icon {
+  color: var(--text);
+}
+
+.result-note {
+  margin: var(--space-5) 0 var(--space-2);
+}
+
+.result-hint {
+  margin: var(--space-2) 0 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--text-muted);
 }
 
 /* Below 768 px the sidebar becomes a tool picker. */
