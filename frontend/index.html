@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LocalPDF Hub</title>
+  <link rel="icon" href="icon.ico">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/app.css">
+  <script>
+    // Before the CSS paints, so a dark preference never flashes light.
+    try {
+      const theme = localStorage.getItem("theme");
+      if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
+    } catch {}
+  </script>
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <div class="app">
+    <div class="picker">
+      <select id="tool-picker" data-i18n-label="toolsLabel"></select>
+      <button class="icon-button" type="button" data-open-settings data-i18n-label="settings">
+        <svg class="icon" aria-hidden="true"><use href="libs/icons.svg#gear-six"/></svg>
+      </button>
+    </div>
+
+    <nav class="sidebar" data-i18n-label="toolsLabel">
+      <p class="brand" data-i18n="appName">LocalPDF Hub</p>
+      <ul id="tool-list" class="tools"></ul>
+      <div class="sidebar-foot">
+        <button class="icon-button" type="button" data-open-settings>
+          <svg class="icon" aria-hidden="true"><use href="libs/icons.svg#gear-six"/></svg>
+          <span data-i18n="settings">Ajustes</span>
+        </button>
+      </div>
+    </nav>
+
+    <main id="work" class="work-area"></main>
+  </div>
+
+  <dialog id="settings" aria-labelledby="settings-title">
+    <form method="dialog">
+      <h2 id="settings-title" data-i18n="settingsTitle">Ajustes</h2>
+      <label class="field">
+        <span class="field-label" data-i18n="language">Idioma</span>
+        <select id="setting-language">
+          <option value="auto" data-i18n="languageAuto">Según el sistema</option>
+          <option value="es">Español</option>
+          <option value="en">English</option>
+        </select>
+      </label>
+      <label class="field">
+        <span class="field-label" data-i18n="theme">Tema</span>
+        <select id="setting-theme">
+          <option value="system" data-i18n="themeSystem">Según el sistema</option>
+          <option value="light" data-i18n="themeLight">Claro</option>
+          <option value="dark" data-i18n="themeDark">Oscuro</option>
+        </select>
+      </label>
+      <p class="about" data-i18n="about"></p>
+      <p><a class="link" href="https://github.com/alaancuevas/LocalPDF-Hub" target="_blank" rel="noopener noreferrer" data-i18n="sourceCode">Código fuente</a></p>
+      <div class="dialog-actions">
+        <button class="primary" value="close" data-i18n="close">Cerrar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="announcer" class="visually-hidden" aria-live="polite"></div>
+</body>
+</html>

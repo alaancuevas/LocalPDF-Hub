@@ -1,0 +1,7 @@
+pytest~=8.3.0
+pytest-cov>=6.0,<8
+# TestClient in FastAPI/Starlette requires httpx.
+httpx>=0.28,<1
+ruff>=0.15,<0.17
+# Type checking of src/ (configured in pyproject.toml).
+mypy>=1.11,<2

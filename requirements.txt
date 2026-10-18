@@ -1,0 +1,13 @@
+# Development install of the dependencies in pyproject.toml;
+# requirements-build.txt pins exact versions for the packaged app.
+fastapi>=0.115,<1
+uvicorn>=0.34,<1
+python-multipart>=0.0.20
+pypdf[crypto]>=6,<7
+pypdfium2>=4.30,<5
+pillow>=11
+pi-heif>=1
+python-docx>=1.1,<2
+platformdirs>=4,<5
+pystray>=0.19
+pywin32>=306; sys_platform == "win32"

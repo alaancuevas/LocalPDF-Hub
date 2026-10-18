@@ -1,0 +1,72 @@
+[project]
+name = "localpdf-hub"
+version = "4.0.0"
+description = "PDF tools that run on your own computer: merge, split, compress, protect and convert."
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.115,<1",
+    "uvicorn>=0.34,<1",
+    "python-multipart>=0.0.20",
+    "pypdf[crypto]>=6,<7",
+    "pypdfium2>=4.30,<5",
+    "pillow>=11",
+    "pi-heif>=1",
+    "python-docx>=1.1,<2",
+    "platformdirs>=4,<5",
+    "pystray>=0.19",
+    "pywin32>=306; sys_platform == 'win32'",
+]
+
+[project.scripts]
+localpdf-hub = "localpdf_hub.desktop:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# The v4 package lives in src/ and is imported without being installed.
+pythonpath = ["src"]
+addopts = "-ra -m 'not windows'"
+markers = [
+    "windows: needs Microsoft Word and pywin32",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "UP", "B", "SIM", "PTH", "RET", "BLE", "S", "ERA", "D"]
+# Docstrings are checked for form where they exist; requiring one on every
+# module, class and function would produce "Merges PDFs." above merge().
+ignore = ["D100", "D101", "D102", "D103", "D104", "D105", "D107"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+known-first-party = ["localpdf_hub"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S106", "D"]
+"scripts/**" = ["D"]
+# Error codes such as ERR_WRONG_PASSWORD are not secrets.
+"src/localpdf_hub/errors.py" = ["S105"]
+# The smoke test only opens a fixed http://127.0.0.1 base and runs the command
+# its own caller passes on the command line.
+"scripts/smoke_test.py" = ["S310", "S603"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["src"]
+mypy_path = "src"
+strict = true
+# Libraries without type information; Windows-only modules are absent on
+# macOS and Linux.
+[[tool.mypy.overrides]]
+module = ["pystray", "pi_heif", "pypdfium2", "docx.*", "pythoncom", "pywintypes", "win32com.*"]
+ignore_missing_imports = true
+
+# python-docx ships types, but add_page_break is not annotated.
+[[tool.mypy.overrides]]
+module = ["localpdf_hub.tools.word"]
+disallow_untyped_calls = false

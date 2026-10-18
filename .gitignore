@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+.pytest_cache/
+
+# PyInstaller output (the executable is built locally or in CI)
+build/
+dist/
+*.spec
+
+# Files the 3.x app created next to itself
+backend/
+temp/
+*.log
+
+# Node.js build tools
+node_modules/
+
+# Built by `npm run build` from the versions in package-lock.json
+frontend/libs/
+
+# Editors, tools and operating systems
+.DS_Store
+Thumbs.db
+.env
+.claude/
+.ruff_cache/
