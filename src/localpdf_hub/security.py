@@ -40,6 +40,23 @@ def _allowed_origins() -> set[str]:
     return origins | {f"http://[::1]:{port}"}
 
 
+async def _drain(receive: Receive, limit: int) -> None:
+    """Reads and drops a request body the app will not handle.
+
+    Windows resets a connection closed with unread data, and the client then
+    loses the answer already sent: a page with a stale token would see a
+    network error instead of the 403 that tells it to reload.
+    """
+    received = 0
+    while received <= limit:
+        message = await receive()
+        if message["type"] != "http.request":
+            return
+        received += len(message.get("body", b""))
+        if not message.get("more_body", False):
+            return
+
+
 def _host_name(host_header: str) -> str:
     if host_header.startswith("["):
         return host_header[1 : host_header.find("]")]
@@ -65,13 +82,19 @@ class RequestGuard:
             await PlainTextResponse("Invalid Host header", status_code=400)(scope, receive, send)
             return
 
+        limit = settings.MAX_UPLOAD_BYTES
+        declared = headers.get("content-length")
+        too_large = bool(declared and declared.isdigit() and int(declared) > limit)
+
         if scope["method"] not in SAFE_METHODS and not self._is_trusted(headers):
+            if not too_large:
+                await _drain(receive, limit)
             await PlainTextResponse("Forbidden", status_code=403)(scope, receive, send)
             return
 
-        limit = settings.MAX_UPLOAD_BYTES
-        declared = headers.get("content-length")
-        if declared and declared.isdigit() and int(declared) > limit:
+        # Not drained: reading past the limit is what this answer avoids. The
+        # UI never sends such a request, it refuses the files beforehand.
+        if too_large:
             await PlainTextResponse("Payload Too Large", status_code=413)(scope, receive, send)
             return
 

@@ -86,6 +86,7 @@ export default {
 
   rejectedType: "{name} is not a file type this tool accepts.",
   rejectedSize: "{name} is larger than 500 MB.",
+  rejectedTotal: "{name} was not added: together the files would pass 500 MB.",
   onlyOne: "This tool uses one file; the previous one was replaced.",
 
   "error.ERR_INVALID_INPUT": "Check the options: one of the values is not valid.",

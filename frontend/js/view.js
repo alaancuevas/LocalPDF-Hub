@@ -177,6 +177,11 @@ export function renderTool(root, id, tool, announce) {
         state.message = t("rejectedSize", { name: file.name });
         continue;
       }
+      // The server limits the whole request, not each file.
+      if (tool.multiple && totalBytes() + file.size > MAX_BYTES) {
+        state.message = t("rejectedTotal", { name: file.name });
+        continue;
+      }
       const entry = { file, pages: undefined, meta: null };
       if (tool.multiple) {
         state.files.push(entry);
@@ -192,6 +197,10 @@ export function renderTool(root, id, tool, announce) {
       });
     }
     draw();
+  }
+
+  function totalBytes() {
+    return state.files.reduce((sum, entry) => sum + entry.file.size, 0);
   }
 
   function removeFile(index) {

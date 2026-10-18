@@ -86,6 +86,7 @@ export default {
 
   rejectedType: "{name} no es un tipo de archivo admitido aquí.",
   rejectedSize: "{name} pasa de 500 MB.",
+  rejectedTotal: "{name} no se agregó: juntos, los archivos pasarían de 500 MB.",
   onlyOne: "Esta herramienta usa un solo archivo; se reemplazó el anterior.",
 
   "error.ERR_INVALID_INPUT": "Revisa las opciones: hay un valor que no es válido.",
