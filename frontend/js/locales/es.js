@@ -105,6 +105,7 @@ export default {
   "error.ERR_INVALID_PDF": "El archivo no es un PDF válido o está dañado.",
   "error.ERR_WRONG_PASSWORD": "La contraseña no es correcta.",
   "error.ERR_NOT_ENCRYPTED": "Ese PDF no tiene contraseña.",
+  "error.ERR_ENCRYPTED": "Este PDF pide contraseña para abrirse. Desbloquéalo primero.",
   "error.ERR_NO_PAGES": "Ninguna de esas páginas existe en el documento.",
   "error.ERR_NO_IMAGES": "El PDF no contiene imágenes.",
   "error.ERR_TOO_LARGE": "El archivo pasa de 500 MB.",

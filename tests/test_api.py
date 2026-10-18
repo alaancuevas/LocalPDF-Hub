@@ -197,6 +197,66 @@ def test_unlock_a_pdf_that_is_not_encrypted(client):
     assert_error(response, 400, "ERR_NOT_ENCRYPTED")
 
 
+def test_unlock_also_applies_the_page_limit(client, monkeypatch):
+    from localpdf_hub import settings
+
+    monkeypatch.setattr(settings, "MAX_PAGES", 2)
+    response = post(client, "unlock", one("a.pdf", encrypted(pdf(3))), password="s3cret")
+    assert_error(response, 413, "ERR_TOO_MANY_PAGES")
+
+
+# --- PDFs with a password in the other tools ---
+
+
+def encrypted(source: bytes, user: str = "s3cret") -> bytes:
+    writer = PdfWriter(clone_from=PdfReader(io.BytesIO(source)))
+    writer.encrypt(user_password=user, owner_password="owner", algorithm="AES-256")
+    buf = io.BytesIO()
+    writer.write(buf)
+    return buf.getvalue()
+
+
+# Every tool that is not about passwords, with the fields it needs.
+PASSWORDLESS_TOOLS = [
+    ("compress", "file", {}),
+    ("split", "file", {"pages": "1"}),
+    ("rotate", "file", {"rotations": "90"}),
+    ("merge", "files", {}),
+    ("watermark", "file", {"text": "X"}),
+    ("extract-images", "file", {}),
+    ("to-images", "file", {}),
+    ("to-word", "file", {}),
+]
+
+
+@pytest.mark.parametrize(("tool", "field", "fields"), PASSWORDLESS_TOOLS)
+def test_a_pdf_that_needs_a_password_is_refused_with_its_own_code(client, tool, field, fields):
+    files = [(field, ("a.pdf", encrypted(pdf_with_image()), "application/pdf"))]
+    assert_error(post(client, tool, files, **fields), 400, "ERR_ENCRYPTED")
+
+
+def test_a_tool_that_reads_an_encrypted_pdf_still_gets_the_right_code():
+    # The page check catches these first; this is the second line for a
+    # route that would read a PDF without going through it.
+    from pypdf.errors import FileNotDecryptedError
+
+    async def read_encrypted() -> None:
+        raise FileNotDecryptedError("File has not been decrypted")
+
+    app = create_app()
+    app.add_api_route("/read-encrypted", read_encrypted, methods=["GET"])
+    # Ahead of the static mount at "/", which would answer 404.
+    app.router.routes.insert(0, app.router.routes.pop())
+    assert_error(TestClient(app, base_url=ORIGIN).get("/read-encrypted"), 400, "ERR_ENCRYPTED")
+
+
+@pytest.mark.parametrize(("tool", "field", "fields"), PASSWORDLESS_TOOLS)
+def test_a_pdf_with_only_an_owner_password_still_works(client, tool, field, fields):
+    # It only restricts printing or copying and opens without a password, as in pdf.js.
+    files = [(field, ("a.pdf", encrypted(pdf_with_image(), user=""), "application/pdf"))]
+    assert post(client, tool, files, **fields).status_code == 200
+
+
 # --- watermark ---
 
 

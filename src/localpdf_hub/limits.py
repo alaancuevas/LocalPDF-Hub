@@ -59,19 +59,32 @@ def check_deadline() -> None:
         raise AppError(errors.TIMEOUT, "The job took too long and was stopped.")
 
 
-def check_page_limit(paths: list[Path]) -> None:
-    """Rejects jobs over MAX_PAGES; tiny pages can dodge the byte limit."""
+def check_page_limit(paths: list[Path], opens_encrypted: bool = False) -> None:
+    """Rejects jobs over MAX_PAGES; tiny pages can dodge the byte limit.
+
+    A PDF that needs a password to open is refused here, before any work,
+    unless the tool is the one that takes the password (unlock, protect).
+    One with only an owner password opens: pypdf tries the empty password.
+    """
     total = 0
     for path in paths:
         if path.suffix.lower() != ".pdf":
             continue
         try:
             total += len(PdfReader(path).pages)
-        except (FileNotDecryptedError, PdfReadError):
-            # Unreadable or encrypted: the tool itself reports the right error.
+        except FileNotDecryptedError as error:
+            if opens_encrypted:
+                continue
+            raise AppError(errors.ENCRYPTED, f"{path.name} needs a password to open.") from error
+        except PdfReadError:
+            # Unreadable: the tool itself reports the right error.
             continue
-        if total > settings.MAX_PAGES:
-            raise AppError(
-                errors.TOO_MANY_PAGES,
-                f"Documents over {settings.MAX_PAGES} pages are not supported.",
-            )
+        check_page_count(total)
+
+
+def check_page_count(total: int) -> None:
+    if total > settings.MAX_PAGES:
+        raise AppError(
+            errors.TOO_MANY_PAGES,
+            f"Documents over {settings.MAX_PAGES} pages are not supported.",
+        )

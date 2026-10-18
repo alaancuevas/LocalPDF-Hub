@@ -12,7 +12,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pypdf.errors import PdfReadError
+from pypdf.errors import FileNotDecryptedError, PdfReadError
 
 from localpdf_hub import __version__, api, errors, settings, workspace
 from localpdf_hub.errors import AppError
@@ -76,6 +76,12 @@ def create_app() -> FastAPI:
     @app.exception_handler(AppError)
     async def app_error(_: Request, error: AppError) -> JSONResponse:
         return _error(error.code, error.message, error.status)
+
+    # Second line behind the check in limits.check_page_limit. Starlette picks the
+    # handler of the most specific class, so this wins over PdfReadError.
+    @app.exception_handler(FileNotDecryptedError)
+    async def encrypted_pdf(_: Request, error: FileNotDecryptedError) -> JSONResponse:
+        return _error(errors.ENCRYPTED, "The PDF needs a password to open.", 400)
 
     @app.exception_handler(PdfReadError)
     async def unreadable_pdf(_: Request, error: PdfReadError) -> JSONResponse:

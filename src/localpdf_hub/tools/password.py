@@ -4,7 +4,7 @@ from pathlib import Path
 
 from pypdf import PasswordType, PdfWriter
 
-from localpdf_hub import errors
+from localpdf_hub import errors, limits
 from localpdf_hub.errors import AppError
 from localpdf_hub.tools.pdf_files import read_pdf, write_pdf
 
@@ -28,5 +28,7 @@ def unlock(path: Path, password: str, out_dir: Path) -> Path:
         raise AppError(errors.NOT_ENCRYPTED, f"{path.name} has no password.")
     if reader.decrypt(password) == PasswordType.NOT_DECRYPTED:
         raise AppError(errors.WRONG_PASSWORD, "The password is not correct.")
+    # The general check could not count the pages before the password was known.
+    limits.check_page_count(len(reader.pages))
     writer = PdfWriter(clone_from=reader)
     return write_pdf(writer, out_dir / f"{path.stem}_unlocked.pdf")

@@ -11,7 +11,12 @@ resulting file, or a JSON error.
   one on every launch.
 - Requests from another site are refused (`Origin` and `Sec-Fetch-Site`
   are checked), so the API is only usable from the app's own page.
-- One upload may be up to 500 MB, and one document up to 2000 pages.
+- One upload may be up to 500 MB, and one document up to 2000 pages. For
+  `unlock` the pages are counted after the password opens the document.
+- A PDF that needs a password to open is refused with `ERR_ENCRYPTED` by
+  every tool except `protect` and `unlock`; unlock it first. A PDF with
+  only an owner password (it restricts printing or copying) opens without
+  one and works everywhere.
 
 ## Endpoints
 
@@ -42,7 +47,7 @@ English for logs:
 
 | Status | Codes |
 |---|---|
-| 400 | `ERR_INVALID_INPUT`, `ERR_INVALID_PDF`, `ERR_WRONG_PASSWORD`, `ERR_NOT_ENCRYPTED`, `ERR_NO_PAGES`, `ERR_NO_IMAGES` |
+| 400 | `ERR_INVALID_INPUT`, `ERR_INVALID_PDF`, `ERR_ENCRYPTED`, `ERR_WRONG_PASSWORD`, `ERR_NOT_ENCRYPTED`, `ERR_NO_PAGES`, `ERR_NO_IMAGES` |
 | 403 | missing or wrong token, foreign origin (plain text, no JSON body) |
 | 413 | `ERR_TOO_LARGE`, `ERR_TOO_MANY_PAGES` |
 | 503 | `ERR_TIMEOUT`, `ERR_CONVERTER_MISSING` (Word to PDF needs Word or LibreOffice) |

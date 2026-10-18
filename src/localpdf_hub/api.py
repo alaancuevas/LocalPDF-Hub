@@ -31,6 +31,8 @@ Uploads = Annotated[list[UploadFile], File()]
 
 # Tools that work on every uploaded file; the rest take the first one.
 _TAKES_ALL_INPUTS = {merge.merge, word.from_word}
+# Tools that take a password and so must receive encrypted PDFs.
+_OPENS_ENCRYPTED = {password.protect, password.unlock}
 
 
 async def _run(
@@ -66,7 +68,7 @@ def _run_limited(
     # The gate is taken here, in the worker thread: a request that gives up
     # leaves this thread running, and it must keep its share of memory.
     with limits.JOB_GATE.slot(weight), limits.job_deadline(settings.JOB_TIMEOUT_S):
-        limits.check_page_limit(inputs)
+        limits.check_page_limit(inputs, opens_encrypted=tool in _OPENS_ENCRYPTED)
         first = inputs if tool in _TAKES_ALL_INPUTS else inputs[0]
         return tool(first, *args, job_dir)
 
