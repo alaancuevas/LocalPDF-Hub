@@ -47,6 +47,10 @@
   --radius-dialog: 10px;
   --shadow-dialog: 0 12px 32px rgb(15 23 42 / 18%);
   --ease: 150ms ease-out;
+  /* Entrances and slides (frontend/js/motion.js uses the same curve). */
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --duration-enter: 200ms;
+  --duration-result: 250ms;
 
   --font: "IBM Plex Sans", system-ui, sans-serif;
   color-scheme: light;

@@ -93,8 +93,12 @@ export default {
 
   working: "Working…",
   doneTitle: "Done",
-  download: "Download {name}",
   again: "Process another",
+  downloadShort: "Download",
+  smaller: "{percent} % smaller",
+  notReduced: "This PDF could not be made any smaller.",
+  resultLocked: "Protected with a password.",
+  continueWith: "Continue with…",
 
   rejectedType: "{name} is not a file type this tool accepts.",
   rejectedSize: "{name} is larger than 500 MB.",

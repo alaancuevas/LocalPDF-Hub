@@ -93,8 +93,12 @@ export default {
 
   working: "Procesando…",
   doneTitle: "Listo",
-  download: "Descargar {name}",
   again: "Procesar otro",
+  downloadShort: "Descargar",
+  smaller: "{percent} % más liviano",
+  notReduced: "Este PDF no se pudo achicar más.",
+  resultLocked: "Protegido con contraseña.",
+  continueWith: "Continuar con…",
 
   rejectedType: "{name} no es un tipo de archivo admitido aquí.",
   rejectedSize: "{name} pasa de 500 MB.",

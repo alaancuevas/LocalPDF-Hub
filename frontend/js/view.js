@@ -3,15 +3,19 @@
 import { ApiError, runTool } from "./api.js";
 import { t } from "./i18n.js";
 import { icon } from "./icons.js";
+import { fadeIn, measure, slide } from "./motion.js";
 import { pageGrid } from "./pagegrid.js";
-import { openPages, probe } from "./pages.js";
+import { openPages, probe, thumbnail } from "./pages.js";
 import { askPasswords } from "./passwords.js";
 import { formatRanges, parseRanges } from "./ranges.js";
-import { accepts } from "./tools.js";
+import { accepts, TOOLS } from "./tools.js";
 
 const MAX_BYTES = 500 * 1024 * 1024;
+// pdf.js makes its own copy of the result to draw the thumbnail.
+const THUMBNAIL_MAX_BYTES = 50 * 1024 * 1024;
 
-export function renderTool(root, id, tool, announce) {
+// options.files: files to start with; options.onContinue(toolId, file) opens another tool with the result.
+export function renderTool(root, id, tool, announce, options = {}) {
   const state = { files: [], values: defaults(tool), status: "idle", result: null, message: "" };
   // Split and Rotate: the open PDF, its thumbnails, and the pages picked or turned.
   Object.assign(state, { doc: null, grid: null, selected: new Set(), anchor: null, angles: [] });
@@ -34,6 +38,7 @@ export function renderTool(root, id, tool, announce) {
   });
   root.replaceChildren(form);
   draw();
+  if (options.files?.length) addFiles(options.files);
   return {
     // Lets a language change redraw the texts without dropping the files.
     redraw: () => {
@@ -42,6 +47,7 @@ export function renderTool(root, id, tool, announce) {
     },
     // Leaving the tool drops the open PDF and any password typed for it.
     destroy: () => {
+      releaseResult();
       closePages();
       for (const entry of state.files) entry.password = null;
     },
@@ -55,6 +61,7 @@ export function renderTool(root, id, tool, announce) {
   function header() {
     const head = el("header", "work-head");
     head.append(el("h1", "", t(`${id}.title`)), el("p", "lede", t(`${id}.lede`)));
+    if (state.status === "working") head.append(el("div", "progress"));
     return head;
   }
 
@@ -109,7 +116,8 @@ export function renderTool(root, id, tool, announce) {
   function fileList() {
     const list = el("ul", "files");
     state.files.forEach((entry, index) => {
-      const row = el("li", "file");
+      const row = el("li", entry.isNew ? "file is-new" : "file");
+      entry.isNew = false;
       entry.row = row;
       entry.meta = el("span", "meta", fileMeta(entry));
       row.classList.toggle("is-locked", Boolean(entry.locked));
@@ -174,6 +182,7 @@ export function renderTool(root, id, tool, announce) {
     }
     const working = state.status === "working";
     state.primary = el("button", "primary", working ? t("working") : t(`${id}.action`));
+    if (working) state.primary.prepend(el("span", "spinner"));
     state.primary.type = "submit";
     state.primary.disabled = !canRun();
     foot.append(state.primary);
@@ -239,20 +248,96 @@ export function renderTool(root, id, tool, announce) {
   }
 
   function resultPanel() {
+    const result = state.result;
     const panel = el("div", "result");
-    panel.append(el("p", "result-title", t("doneTitle")));
-    const link = el("a", "primary", t("download", { name: state.result.name }));
-    link.href = state.result.url;
-    link.download = state.result.name;
+    // The entrance plays once, when the result arrives; a language change or
+    // protecting it again redraws the card without moving it.
+    if (state.justFinished) panel.classList.add("is-entering");
+    state.justFinished = false;
+
+    const preview = el("div", "result-preview");
+    if (result.thumb) preview.append(result.thumb);
+    else preview.append(icon(previewIcon(result), 32));
+    panel.append(preview);
+
+    const info = el("div", "result-info");
+    const title = el("p", "result-title");
+    title.append(checkMark(), document.createTextNode(t("doneTitle")));
+    info.append(title, el("p", "result-name", result.name), el("p", "result-meta", resultMeta(result)));
+    if (id === "compress" && result.blob.size >= result.inputBytes) info.append(el("p", "result-note", t("notReduced")));
+    if (result.locked) info.append(el("p", "result-note", t("resultLocked")));
+
+    const link = el("a", "primary", t("downloadShort"));
+    link.href = result.url;
+    link.download = result.name;
+    link.setAttribute("aria-label", `${t("downloadShort")} ${result.name}`);
     const again = el("button", "secondary", t("again"));
     again.type = "button";
     again.addEventListener("click", reset);
     const actions = el("div", "result-actions");
     actions.append(link, again);
-    panel.append(actions);
-    panel.append(...passwordNotice());
+    info.append(actions, ...passwordNotice());
+    panel.append(info);
+
+    const next = continueTargets();
+    if (next.length) {
+      const box = el("div", "result-next");
+      box.append(el("p", "section-label", t("continueWith")));
+      const list = el("div", "result-next-list");
+      for (const target of next) {
+        const button = el("button", "chip");
+        button.type = "button";
+        button.append(icon(TOOLS[target].icon, 16), document.createTextNode(t(`short.${target}`)));
+        button.addEventListener("click", () => options.onContinue?.(target, resultFile()));
+        list.append(button);
+      }
+      box.append(list);
+      panel.append(box);
+    }
     queueMicrotask(() => link.focus());
     return panel;
+  }
+
+  // Tools that take the result as it is, except this one. A copy made from a
+  // file opened with its password stays here, next to "Protect again".
+  function continueTargets() {
+    if (!options.onContinue || state.files.some((entry) => entry.password)) return [];
+    const file = resultFile();
+    // Unlock only makes sense for a protected result, and Protect for one that is not.
+    const skip = new Set([id, state.result.locked ? "protect" : "unlock"]);
+    return Object.keys(TOOLS).filter((other) => !skip.has(other) && accepts(TOOLS[other], file));
+  }
+
+  function resultFile() {
+    return new File([state.result.blob], state.result.name, { type: state.result.blob.type });
+  }
+
+  // First page and page count of a PDF result, drawn once and kept for redraws.
+  function drawThumbnail() {
+    const result = state.result;
+    if (!result.name.toLowerCase().endsWith(".pdf") || result.blob.size > THUMBNAIL_MAX_BYTES) return;
+    state.thumbJob?.abort();
+    state.thumbJob = new AbortController();
+    thumbnail(result.blob, 96, state.thumbJob.signal).then((drawn) => {
+      if (!drawn || state.result !== result) return;
+      if (drawn.locked) result.locked = true;
+      else Object.assign(result, { thumb: drawn.canvas, pages: drawn.pages });
+      // The card on screen now, which a language change may have replaced.
+      const preview = form.querySelector(".result-preview");
+      if (preview && result.thumb) {
+        preview.replaceChildren(result.thumb);
+        fadeIn(result.thumb, 200);
+      }
+      const meta = form.querySelector(".result-meta");
+      if (meta) meta.textContent = resultMeta(result);
+      if (result.locked) draw();
+    });
+  }
+
+  function releaseResult() {
+    state.thumbJob?.abort();
+    state.thumbJob = null;
+    if (state.result) URL.revokeObjectURL(state.result.url);
   }
 
   // What the result panel says when a file was opened with its password.
@@ -280,7 +365,8 @@ export function renderTool(root, id, tool, announce) {
     try {
       const { blob } = await runTool("protect", body);
       URL.revokeObjectURL(state.result.url);
-      state.result = { url: URL.createObjectURL(blob), name: state.result.name, blob, protected: true };
+      // Same pages as before; pdf.js cannot draw the encrypted copy.
+      state.result = { ...state.result, url: URL.createObjectURL(blob), blob, protected: true, locked: true, thumb: null, error: undefined };
       for (const entry of state.files) entry.password = null;
       announce(t("protectedAgain"));
     } catch (error) {
@@ -334,7 +420,7 @@ export function renderTool(root, id, tool, announce) {
         state.message = t("rejectedTotal", { name: file.name });
         continue;
       }
-      const entry = { file, pages: undefined, rotation: 0, meta: null };
+      const entry = { file, pages: undefined, rotation: 0, meta: null, isNew: true };
       if (tool.multiple) {
         state.files.push(entry);
       } else {
@@ -355,10 +441,17 @@ export function renderTool(root, id, tool, announce) {
     return state.files.reduce((sum, entry) => sum + entry.file.size, 0);
   }
 
+  // The rows below a removed one, or around a moved one, slide to their new place.
+  function rows() {
+    return state.files.map((entry) => [entry, entry.row]);
+  }
+
   function removeFile(index) {
+    const before = measure(rows());
     state.files.splice(index, 1);
     if (tool.pagePicker) closePages();
     draw();
+    slide(before, rows());
   }
 
   function move(index, step) {
@@ -368,7 +461,9 @@ export function renderTool(root, id, tool, announce) {
     const edge = target === 0 || target === state.files.length - 1;
     // Keep focus on the moved row so the keyboard user can keep moving it.
     const action = step < 0 ? (edge ? "down" : "up") : edge ? "up" : "down";
+    const before = measure(rows());
     draw(`.file:nth-child(${target + 1}) [data-action="${action}"]`);
+    slide(before, rows());
   }
 
   function rotateFile(index) {
@@ -379,7 +474,7 @@ export function renderTool(root, id, tool, announce) {
   }
 
   function reset() {
-    if (state.result) URL.revokeObjectURL(state.result.url);
+    releaseResult();
     closePages();
     Object.assign(state, { files: [], status: "idle", result: null, message: "" });
     if (tool.pagePicker === "select") state.values.pages = "";
@@ -410,8 +505,10 @@ export function renderTool(root, id, tool, announce) {
     announce(t("working"));
     try {
       const { blob, name } = await runTool(tool.endpoint, body);
-      state.result = { url: URL.createObjectURL(blob), name, blob };
+      state.result = { url: URL.createObjectURL(blob), name, blob, inputBytes: totalBytes(), pages: null, thumb: null };
       state.status = "done";
+      state.justFinished = true;
+      drawThumbnail();
       announce(t("doneTitle"));
     } catch (error) {
       state.status = "error";
@@ -454,6 +551,30 @@ function selectFor(field) {
   const select = document.createElement("select");
   for (const [value, text] of field.options) select.append(new Option(t(text), value));
   return select;
+}
+
+function previewIcon(result) {
+  const name = result.name.toLowerCase();
+  if (result.locked) return "lock-simple";
+  if (name.endsWith(".zip")) return "file-zip";
+  if (name.endsWith(".docx")) return "file-doc";
+  return "file-pdf";
+}
+
+function resultMeta(result) {
+  const parts = [];
+  if (typeof result.pages === "number") parts.push(result.pages === 1 ? t("page") : t("pages", { count: result.pages }));
+  parts.push(`${formatSize(result.inputBytes)} → ${formatSize(result.blob.size)}`);
+  const saved = Math.round((1 - result.blob.size / result.inputBytes) * 100);
+  if (saved > 0) parts.push(t("smaller", { percent: saved }));
+  return parts.join(" · ");
+}
+
+// A check drawn as one stroke (frontend/icons/check-draw.svg); CSS draws it in.
+function checkMark() {
+  const mark = icon("check-draw", 16);
+  mark.classList.add("check-draw");
+  return mark;
 }
 
 function kindIcon(file) {

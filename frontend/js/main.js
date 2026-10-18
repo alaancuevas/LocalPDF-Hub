@@ -1,5 +1,6 @@
 import { language, readPreference, setPreference, t } from "./i18n.js";
 import { icon } from "./icons.js";
+import { fadeIn, measure, slide } from "./motion.js";
 import { readTheme, setTheme } from "./theme.js";
 import { GROUPS, TOOLS } from "./tools.js";
 import { renderTool } from "./view.js";
@@ -47,7 +48,13 @@ function renderChrome() {
       link.className = "tool";
       link.href = `#${id}`;
       link.append(icon(TOOLS[id].icon), document.createTextNode(t(`short.${id}`)));
-      if (id === active) link.setAttribute("aria-current", "page");
+      if (id === active) {
+        link.setAttribute("aria-current", "page");
+        const bar = document.createElement("span");
+        bar.className = "tool-bar";
+        bar.setAttribute("aria-hidden", "true");
+        link.prepend(bar);
+      }
       const item = document.createElement("li");
       item.append(link);
       sidebarList.append(item);
@@ -58,19 +65,32 @@ function renderChrome() {
 }
 
 let view;
+// A result passed on with "Continue with…", picked up by the next tool once.
+let handover = null;
 
-function show() {
+function show({ initial = false } = {}) {
   const id = currentTool();
+  // The selection bar slides from the old tool to the new one; nothing moves on page load.
+  const before = measure([["bar", sidebarList.querySelector(".tool-bar")]]);
   renderChrome();
-  // Frees the open PDF of the tool being left.
+  if (!initial) slide(before, [["bar", sidebarList.querySelector(".tool-bar")]]);
+  // Frees the open PDF and the result of the tool being left.
   view?.destroy();
-  view = renderTool(work, id, TOOLS[id], announce);
+  const files = handover?.id === id ? [handover.file] : [];
+  handover = null;
+  view = renderTool(work, id, TOOLS[id], announce, { files, onContinue });
+  if (!initial) fadeIn(work);
+}
+
+function onContinue(id, file) {
+  handover = { id, file };
+  location.hash = id;
 }
 
 picker.addEventListener("change", () => {
   location.hash = picker.value;
 });
-window.addEventListener("hashchange", show);
+window.addEventListener("hashchange", () => show());
 
 for (const button of document.querySelectorAll("[data-open-settings]")) {
   button.addEventListener("click", () => {
@@ -89,4 +109,4 @@ settings.querySelector("#setting-theme").addEventListener("change", (event) => {
 });
 
 document.documentElement.lang = language();
-show();
+show({ initial: true });

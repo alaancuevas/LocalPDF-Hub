@@ -3,6 +3,7 @@
 
 import { t } from "./i18n.js";
 import { icon } from "./icons.js";
+import { fadeIn } from "./motion.js";
 
 export function pageGrid({ mode, doc, state, onChange }) {
   const section = el("section", "pages");
@@ -100,7 +101,11 @@ export function pageGrid({ mode, doc, state, onChange }) {
     canvas.className = "sheet";
     canvas.setAttribute("aria-hidden", "true");
     doc.draw(entry.number, canvas, box).then(() => {
-      if (canvas.width) entry.sheet.querySelector(".sheet-placeholder")?.replaceWith(canvas);
+      const placeholder = entry.sheet.querySelector(".sheet-placeholder");
+      if (canvas.width && placeholder) {
+        placeholder.replaceWith(canvas);
+        fadeIn(canvas, 200);
+      }
     });
   }
 

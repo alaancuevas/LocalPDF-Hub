@@ -69,6 +69,30 @@ export async function openPages(file) {
   };
 }
 
+/**
+ * The first page of a result, drawn once, with its page count. pdf.js is
+ * closed as soon as the page is drawn. Returns { locked: true } for an
+ * encrypted result and null when it cannot be read or the signal aborted.
+ */
+export async function thumbnail(blob, box, signal) {
+  const lib = await pdfjs();
+  if (signal.aborted) return null;
+  const task = lib.getDocument({ data: await blob.arrayBuffer() });
+  const stop = () => task.destroy();
+  signal.addEventListener("abort", stop, { once: true });
+  try {
+    const pdf = await task.promise;
+    const canvas = document.createElement("canvas");
+    await drawPage(pdf, 1, canvas, box);
+    return signal.aborted ? null : { canvas, pages: pdf.numPages };
+  } catch (error) {
+    return error?.name === "PasswordException" ? { locked: true } : null;
+  } finally {
+    signal.removeEventListener("abort", stop);
+    task.destroy();
+  }
+}
+
 async function drawPage(pdf, number, canvas, box) {
   const page = await pdf.getPage(number);
   const natural = page.getViewport({ scale: 1 });

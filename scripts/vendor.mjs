@@ -20,6 +20,7 @@ export const PHOSPHOR_ICONS = [
   "caret-up",
   "file-doc",
   "file-pdf",
+  "file-zip",
   "files",
   "gear-six",
   "image",
