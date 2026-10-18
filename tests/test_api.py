@@ -280,6 +280,23 @@ def test_old_spanish_routes_are_gone(client):
     assert client.post("/procesar").status_code in (404, 405)
 
 
+def test_every_response_carries_a_strict_content_security_policy(client):
+    # Defence in depth for the launch token: injected markup could not run.
+    for path in ("/", "/js/main.js", "/health"):
+        policy = client.get(path).headers["content-security-policy"]
+        assert "default-src 'self'" in policy
+        assert "frame-ancestors 'none'" in policy
+        assert "unsafe-inline" not in policy
+        assert "unsafe-eval" not in policy
+
+
+def test_index_has_no_inline_script():
+    from localpdf_hub import settings
+
+    html = (settings.FRONTEND_DIR / "index.html").read_text(encoding="utf-8")
+    assert not re.search(r"<script(?![^>]*\bsrc=)[^>]*>", html)
+
+
 def test_static_files_are_revalidated(client):
     # Otherwise browsers keep old JavaScript after an update.
     response = client.get("/js/main.js")

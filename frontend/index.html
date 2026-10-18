@@ -7,23 +7,18 @@
   <link rel="icon" href="icon.ico">
   <link rel="stylesheet" href="css/tokens.css">
   <link rel="stylesheet" href="css/app.css">
-  <script>
-    // Before the CSS paints, so a dark preference never flashes light.
-    try {
-      const theme = localStorage.getItem("theme");
-      if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
-    } catch {}
-  </script>
+  <script src="js/theme-init.js"></script>
   <script type="module" src="js/main.js"></script>
 </head>
 <body>
   <div class="app">
-    <div class="picker">
+    <!-- Only one of the two navs is displayed at a time, so they share a label. -->
+    <nav class="picker" data-i18n-label="toolsLabel">
       <select id="tool-picker" data-i18n-label="toolsLabel"></select>
       <button class="icon-button" type="button" data-open-settings data-i18n-label="settings">
         <svg class="icon" aria-hidden="true"><use href="libs/icons.svg#gear-six"/></svg>
       </button>
-    </div>
+    </nav>
 
     <nav class="sidebar" data-i18n-label="toolsLabel">
       <p class="brand" data-i18n="appName">LocalPDF Hub</p>

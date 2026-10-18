@@ -40,6 +40,44 @@ def _allowed_origins() -> set[str]:
     return origins | {f"http://[::1]:{port}"}
 
 
+CONTENT_SECURITY_POLICY = "; ".join(
+    [
+        "default-src 'self'",
+        # Thumbnails and results are drawn from blob: URLs the page makes itself.
+        "img-src 'self' blob: data:",
+        "object-src 'none'",
+        "base-uri 'none'",
+        "form-action 'self'",
+        "frame-ancestors 'none'",
+    ]
+)
+
+
+class SecurityHeaders:
+    """Adds the CSP and a few browser hardening headers to every response."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def with_headers(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                headers += [
+                    (b"content-security-policy", CONTENT_SECURITY_POLICY.encode()),
+                    (b"x-content-type-options", b"nosniff"),
+                    (b"referrer-policy", b"no-referrer"),
+                ]
+                message["headers"] = headers
+            await send(message)
+
+        await self.app(scope, receive, with_headers)
+
+
 async def _drain(receive: Receive, limit: int) -> None:
     """Reads and drops a request body the app will not handle.
 

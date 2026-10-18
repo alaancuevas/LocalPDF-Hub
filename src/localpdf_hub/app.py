@@ -16,7 +16,7 @@ from pypdf.errors import PdfReadError
 
 from localpdf_hub import __version__, api, errors, settings, workspace
 from localpdf_hub.errors import AppError
-from localpdf_hub.security import RequestGuard
+from localpdf_hub.security import RequestGuard, SecurityHeaders
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +69,8 @@ def create_app() -> FastAPI:
     # No CORSMiddleware on purpose: the UI is served from this same origin,
     # and approving preflights is what would let a foreign page send the token.
     app.add_middleware(RequestGuard, token=token)
+    # Added last, so it is outermost and also covers the guard's own answers.
+    app.add_middleware(SecurityHeaders)
     app.include_router(api.router)
 
     @app.exception_handler(AppError)

@@ -152,6 +152,8 @@ export function renderTool(root, id, tool, announce) {
 
   function footer() {
     const foot = el("footer", "work-foot");
+    // The result panel has its own buttons; an empty bar would only add a line.
+    foot.hidden = state.status === "done";
     if (state.status === "done") return foot;
     state.summary = el("span", "summary", summary());
     foot.append(state.summary);
