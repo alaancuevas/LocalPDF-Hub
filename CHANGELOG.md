@@ -3,6 +3,17 @@
 All notable changes to LocalPDF Hub. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- The result is a card: a thumbnail of the first page, the page count, the
+  size before and after, and "Continue with…" to open another tool with
+  the result already loaded.
+- A progress bar and a spinner while a tool runs.
+- Short movement that follows the state: new files fade in, reordered
+  rows slide, the sidebar selection slides, and the result card draws its
+  check. All of it stops when the system asks for reduced motion.
+
 ## [4.0.1] - 2026-10-18
 
 ### Fixed

@@ -66,8 +66,18 @@ of a control.
   the sidebar are square.
 - Shadows only on dialogs and menus (one soft shadow); everything else is
   separated by background colour.
-- Motion: 150 ms ease-out for hover, selection and dialogs; nothing on page
-  load. With `prefers-reduced-motion`, no movement at all.
+- Motion only shows a change of state: something arrives, moves, finishes
+  or is working. Hover, selection and dialogs ease over 150 ms; a new file
+  row or thumbnail fades in over 200 ms; the result card and its check
+  draw in over 250 ms, the longest anything takes. Rows and the sidebar
+  bar slide to their new place (FLIP); switching tools fades the work area
+  in over 150 ms. Curve `--ease-out` (`cubic-bezier(0.2, 0, 0, 1)`), and
+  only `opacity` and `transform` move.
+- Nothing animates on page load, and with `prefers-reduced-motion` nothing
+  moves at all: the progress bar becomes a still strip.
+- Animations are named `lpdf-*`. The CSP forbids inline styles, so script
+  animates with `element.animate()` or `element.style`, never with
+  `setAttribute("style")` or `style.cssText`.
 
 ## Icons
 
