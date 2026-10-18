@@ -10,4 +10,5 @@ pi-heif>=1
 python-docx>=1.1,<2
 platformdirs>=4,<5
 pystray>=0.19
+fonttools>=4.60,<5
 pywin32>=306; sys_platform == "win32"

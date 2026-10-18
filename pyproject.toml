@@ -15,6 +15,7 @@ dependencies = [
     "python-docx>=1.1,<2",
     "platformdirs>=4,<5",
     "pystray>=0.19",
+    "fonttools>=4.60,<5",
     "pywin32>=306; sys_platform == 'win32'",
 ]
 
@@ -63,7 +64,9 @@ strict = true
 # Libraries without type information; Windows-only modules are absent on
 # macOS and Linux.
 [[tool.mypy.overrides]]
-module = ["pystray", "pi_heif", "pypdfium2", "docx.*", "pythoncom", "pywintypes", "win32com.*"]
+module = [
+    "pystray", "pi_heif", "pypdfium2", "docx.*", "fontTools.*", "pythoncom", "pywintypes", "win32com.*",
+]
 ignore_missing_imports = true
 
 # python-docx ships types, but add_page_break is not annotated.

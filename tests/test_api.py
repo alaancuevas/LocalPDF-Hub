@@ -266,7 +266,13 @@ def test_watermark_keeps_the_page_count(client):
 
 
 @pytest.mark.parametrize(
-    "fields", [{"text": "", "opacity": "0.3"}, {"text": "X", "opacity": "1.5"}]
+    "fields",
+    [
+        {"text": "", "opacity": "0.3"},
+        {"text": "X", "opacity": "1.5"},
+        {"text": "x" * 101, "opacity": "0.3"},
+        {"text": "\U0001f600", "opacity": "0.3"},
+    ],
 )
 def test_watermark_rejects_bad_options(client, fields):
     response = post(client, "watermark", one("a.pdf", pdf(1)), **fields)

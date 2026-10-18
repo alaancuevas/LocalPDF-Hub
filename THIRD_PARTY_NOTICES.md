@@ -12,6 +12,7 @@ actually bundled for that system.
 |---|---|---|
 | Python | PSF-2.0 | runtime |
 | FastAPI, Pydantic, h11, AnyIO, python-docx, platformdirs, six, PyObjC (macOS) | MIT | server, Word files, folders, menu bar icon |
+| fontTools | MIT | embedding a font subset for watermarks |
 | Starlette, Uvicorn, Click, pypdf, pycparser, lxml | BSD-3-Clause | server, PDF editing, Word files |
 | python-multipart | Apache-2.0 | file uploads |
 | cryptography | Apache-2.0 or BSD-3-Clause | AES-256 for protected PDFs |

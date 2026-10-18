@@ -2,9 +2,10 @@
 
 Starts the given command (the packaged executable in CI), waits for
 /health, then checks the request guard, the type the UI scripts are served
-with, one real merge, and a PDF protected with AES-256 that opens with its
-password. Besides the standard library it needs only pypdf, which the CI
-installs to run the tests, to open that PDF.
+with, one real merge, a watermark with an embedded font, and a PDF
+protected with AES-256 that opens with its password. Besides the standard
+library it needs only pypdf, which the CI installs to run the tests, to
+open that PDF.
 
     python scripts/smoke_test.py dist/LocalPDF-Hub.exe
     python scripts/smoke_test.py dist/LocalPDF-Hub.app/Contents/MacOS/LocalPDF-Hub
@@ -131,6 +132,15 @@ def run_checks() -> list[str]:
         {"password": SMOKE_PASSWORD},
     )
     failures.extend(_check_protected(status, body))
+
+    status, body = _post(
+        "/api/v1/pdf/watermark",
+        {"X-LocalPDF-Token": token, "Origin": BASE},
+        "file",
+        [pdf],
+        {"text": "SMOKE", "opacity": "0.3"},
+    )
+    failures.extend(_check_watermarked(status, body))
     return failures
 
 
@@ -151,6 +161,24 @@ def _check_protected(status: int, body: bytes) -> list[str]:
     return failures
 
 
+def _check_watermarked(status: int, body: bytes) -> list[str]:
+    # fontTools is imported lazily by the frozen build; a missing module or
+    # table shows up here as a 500, not in the tests that run from source.
+    if status != 200 or not body.startswith(b"%PDF"):
+        return [f"watermark: expected a PDF, got {status}"]
+    resources = PdfReader(io.BytesIO(body)).pages[0]["/Resources"]
+    if resources.get("/XObject"):
+        return ["watermark: the mark was drawn as an image"]
+    fonts = [font.get_object() for font in resources.get("/Font", {}).values()]
+    embedded = [
+        font
+        for font in fonts
+        if font.get("/Subtype") == "/Type0"
+        and "/FontFile2" in font["/DescendantFonts"][0].get_object()["/FontDescriptor"].get_object()
+    ]
+    return [] if embedded else ["watermark: no embedded Type0 font"]
+
+
 def main() -> None:
     if len(sys.argv) < 2:
         raise SystemExit(__doc__)
@@ -166,7 +194,7 @@ def main() -> None:
             process.kill()
     if failures:
         raise SystemExit("FAIL:\n  " + "\n  ".join(failures))
-    print("PASS: health, request guard, script types, merge and AES-256 protect")
+    print("PASS: health, request guard, script types, merge, AES-256 protect and watermark")
 
 
 if __name__ == "__main__":
