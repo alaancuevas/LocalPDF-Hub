@@ -3,7 +3,7 @@
 All notable changes to LocalPDF Hub. Versions follow
 [Semantic Versioning](https://semver.org/).
 
-## [4.0.0] - Unreleased
+## [4.0.0] - 2026-10-18
 
 The first open source release: a new interface, a Mac app and a server
 rebuilt around a written contract.
