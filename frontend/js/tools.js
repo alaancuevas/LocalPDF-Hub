@@ -40,7 +40,7 @@ export const TOOLS = {
     fields: [{ name: "password", label: "optionPassword", type: "password", required: true }],
   },
   watermark: {
-    icon: "drop-half",
+    icon: "watermark",
     endpoint: "watermark",
     accepts: PDF,
     fields: [
@@ -48,8 +48,8 @@ export const TOOLS = {
       { name: "opacity", label: "optionOpacity", type: "range", min: 0.05, max: 1, step: 0.05, value: 0.3 },
     ],
   },
-  extractImages: { icon: "image", endpoint: "extract-images", accepts: PDF, fields: [] },
-  toImages: { icon: "images", endpoint: "to-images", accepts: PDF, fields: [] },
+  extractImages: { icon: "extract-images", endpoint: "extract-images", accepts: PDF, fields: [] },
+  toImages: { icon: "pdf-to-images", endpoint: "to-images", accepts: PDF, fields: [] },
   toWord: { icon: "file-doc", endpoint: "to-word", accepts: PDF, fields: [] },
   fromWord: { icon: "file-pdf", endpoint: "from-word", accepts: WORD, multiple: true, fields: [] },
 };
