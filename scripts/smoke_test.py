@@ -2,10 +2,12 @@
 
 Starts the given command (the packaged executable in CI), waits for
 /health, then checks the request guard, the type the UI scripts are served
-with, and one real merge. Only the standard library is used, so it runs
-next to a frozen build too.
+with, one real merge, and a PDF protected with AES-256 that opens with its
+password. Besides the standard library it needs only pypdf, which the CI
+installs to run the tests, to open that PDF.
 
     python scripts/smoke_test.py dist/LocalPDF-Hub.exe
+    python scripts/smoke_test.py dist/LocalPDF-Hub.app/Contents/MacOS/LocalPDF-Hub
     python scripts/smoke_test.py python -m localpdf_hub   (with src/ on PYTHONPATH)
 """
 
@@ -18,8 +20,11 @@ import urllib.error
 import urllib.request
 import uuid
 
+from pypdf import PasswordType, PdfReader
+
 BASE = "http://127.0.0.1:8000"
 STARTUP_TIMEOUT_S = 60
+SMOKE_PASSWORD = "smoke-test-password"  # noqa: S105 -- a test fixture, not a secret
 
 
 def _blank_pdf() -> bytes:
@@ -41,9 +46,12 @@ def _blank_pdf() -> bytes:
     return out.getvalue()
 
 
-def _multipart(field: str, files: list[bytes]) -> tuple[bytes, str]:
+def _multipart(field: str, files: list[bytes], fields: dict[str, str]) -> tuple[bytes, str]:
     boundary = uuid.uuid4().hex
     out = io.BytesIO()
+    for name, value in fields.items():
+        out.write(f"--{boundary}\r\n".encode())
+        out.write(f'Content-Disposition: form-data; name="{name}"\r\n\r\n{value}\r\n'.encode())
     for i, data in enumerate(files):
         out.write(f"--{boundary}\r\n".encode())
         out.write(
@@ -54,8 +62,10 @@ def _multipart(field: str, files: list[bytes]) -> tuple[bytes, str]:
     return out.getvalue(), f"multipart/form-data; boundary={boundary}"
 
 
-def _post(path: str, headers: dict, field: str, files: list[bytes]) -> tuple[int, bytes]:
-    body, content_type = _multipart(field, files)
+def _post(
+    path: str, headers: dict, field: str, files: list[bytes], fields: dict[str, str] | None = None
+) -> tuple[int, bytes]:
+    body, content_type = _multipart(field, files, fields or {})
     request = urllib.request.Request(
         BASE + path, data=body, method="POST", headers={"Content-Type": content_type, **headers}
     )
@@ -112,6 +122,32 @@ def run_checks() -> list[str]:
     )
     if status != 200 or not body.startswith(b"%PDF"):
         failures.append(f"merge with token: expected a PDF, got {status}")
+
+    status, body = _post(
+        "/api/v1/pdf/protect",
+        {"X-LocalPDF-Token": token, "Origin": BASE},
+        "file",
+        [pdf],
+        {"password": SMOKE_PASSWORD},
+    )
+    failures.extend(_check_protected(status, body))
+    return failures
+
+
+def _check_protected(status: int, body: bytes) -> list[str]:
+    # The frozen build carries its own crypto; a missing AES provider shows
+    # up here, not in the tests that run from source.
+    if status != 200 or not body.startswith(b"%PDF"):
+        return [f"protect: expected a PDF, got {status}"]
+    failures = []
+    encrypt = PdfReader(io.BytesIO(body)).trailer["/Encrypt"].get_object()
+    if encrypt.get("/V") != 5:
+        failures.append(f"protect: expected AES-256 (/V 5), got /V {encrypt.get('/V')}")
+    if PdfReader(io.BytesIO(body)).decrypt("not-the-password") != PasswordType.NOT_DECRYPTED:
+        failures.append("protect: a wrong password opened the PDF")
+    reader = PdfReader(io.BytesIO(body))
+    if reader.decrypt(SMOKE_PASSWORD) == PasswordType.NOT_DECRYPTED or len(reader.pages) != 1:
+        failures.append("protect: the PDF does not open with its password")
     return failures
 
 
@@ -130,7 +166,7 @@ def main() -> None:
             process.kill()
     if failures:
         raise SystemExit("FAIL:\n  " + "\n  ".join(failures))
-    print("PASS: health, request guard, script types and merge")
+    print("PASS: health, request guard, script types, merge and AES-256 protect")
 
 
 if __name__ == "__main__":

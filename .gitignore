@@ -9,6 +9,7 @@ venv/
 build/
 dist/
 *.spec
+!LocalPDF-Hub.spec
 
 # Files the 3.x app created next to itself
 backend/
