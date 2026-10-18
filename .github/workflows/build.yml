@@ -16,11 +16,15 @@ jobs:
         include:
           - os: windows-latest
             binary: dist/LocalPDF-Hub.exe
-            download: dist/LocalPDF-Hub.exe
+            download: |
+              dist/LocalPDF-Hub.exe
+              dist/THIRD_PARTY_LICENSES-windows.txt
             artifact: LocalPDF-Hub-windows
           - os: macos-14
             binary: dist/LocalPDF-Hub.app/Contents/MacOS/LocalPDF-Hub
-            download: dist/LocalPDF-Hub-macos-arm64.dmg
+            download: |
+              dist/LocalPDF-Hub-macos-arm64.dmg
+              dist/THIRD_PARTY_LICENSES-macos.txt
             artifact: LocalPDF-Hub-macos-arm64
     runs-on: ${{ matrix.os }}
     steps:

@@ -30,7 +30,11 @@ hiddenimports = [
 a = Analysis(
     [str(ROOT / "src" / "localpdf_hub" / "__main__.py")],
     pathex=[str(ROOT / "src")],
-    datas=[(str(ROOT / "frontend"), "frontend")],
+    # build.py writes the license texts before running this spec.
+    datas=[
+        (str(ROOT / "frontend"), "frontend"),
+        (str(ROOT / "build" / "THIRD_PARTY_LICENSES.txt"), "."),
+    ],
     hiddenimports=hiddenimports,
 )
 pyz = PYZ(a.pure)
