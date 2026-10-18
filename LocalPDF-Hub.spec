@@ -10,7 +10,9 @@ from PyInstaller.utils.hooks import collect_submodules
 ROOT = Path(SPECPATH)
 VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
 MAC = sys.platform == "darwin"
-ICON = str(ROOT / "frontend" / "icon.ico")
+# Windows, the tray and the favicon use the full-bleed icon.ico; the .app
+# uses a 1024 PNG drawn on Apple's icon grid, with its margin and corners.
+ICON = str(ROOT / "frontend" / ("icon-macos.png" if MAC else "icon.ico"))
 
 # Modules loaded by name at runtime, which PyInstaller cannot see.
 hiddenimports = [
