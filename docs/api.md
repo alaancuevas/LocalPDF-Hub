@@ -28,7 +28,7 @@ resulting file, or a JSON error.
 | `/api/v1/pdf/compress` | `file` | PDF |
 | `/api/v1/pdf/protect` | `file`, `password` | PDF encrypted with AES-256 |
 | `/api/v1/pdf/unlock` | `file`, `password` | PDF |
-| `/api/v1/pdf/watermark` | `file`, `text`, `opacity` (0.05 to 1, default 0.3) | PDF |
+| `/api/v1/pdf/watermark` | `file`, `text` (1 to 100 characters; line breaks and repeated spaces become one space; no right-to-left scripts), `opacity` (0.05 to 1, default 0.3) | PDF, with the mark as real text in an embedded subset of a system font |
 | `/api/v1/pdf/extract-images` | `file` | ZIP of PNG files |
 | `/api/v1/pdf/to-images` | `file` | ZIP with one PNG per page |
 | `/api/v1/pdf/to-word` | `file` | DOCX |

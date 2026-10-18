@@ -3,6 +3,18 @@
 All notable changes to LocalPDF Hub. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [4.0.1] - 2026-10-18
+
+### Fixed
+- Watermarks are written as real text with an embedded font subset
+  instead of a full-page image: files stay small, scroll smoothly and the
+  mark can be searched and selected.
+
+### Changed
+- The watermark text is limited to 100 characters; line breaks and
+  repeated spaces become a single space. Right-to-left scripts and
+  characters the system font lacks are refused with a clear error.
+
 ## [4.0.0] - 2026-10-18
 
 The first open source release: a new interface, a Mac app and a server
