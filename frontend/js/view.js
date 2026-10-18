@@ -98,6 +98,9 @@ export function renderTool(root, id, tool, announce) {
           iconButton("caret-down", t("moveDown"), () => move(index, 1), index === state.files.length - 1, "down"),
         );
       }
+      if (tool.rotatable) {
+        actions.append(iconButton("arrow-clockwise", t("rotateFile"), () => rotateFile(index), false, "rotate"));
+      }
       actions.append(iconButton("x", t("remove"), () => removeFile(index), false, "remove"));
       row.append(actions);
       list.append(row);
@@ -182,7 +185,7 @@ export function renderTool(root, id, tool, announce) {
         state.message = t("rejectedTotal", { name: file.name });
         continue;
       }
-      const entry = { file, pages: undefined, meta: null };
+      const entry = { file, pages: undefined, rotation: 0, meta: null };
       if (tool.multiple) {
         state.files.push(entry);
       } else {
@@ -218,6 +221,13 @@ export function renderTool(root, id, tool, announce) {
     draw(`.file:nth-child(${target + 1}) [data-action="${action}"]`);
   }
 
+  function rotateFile(index) {
+    const entry = state.files[index];
+    entry.rotation = (entry.rotation + 90) % 360;
+    draw(`.file:nth-child(${index + 1}) [data-action="rotate"]`);
+    announce(t("rotatedTo", { name: entry.file.name, angle: entry.rotation }));
+  }
+
   function reset() {
     if (state.result) URL.revokeObjectURL(state.result.url);
     Object.assign(state, { files: [], status: "idle", result: null, message: "" });
@@ -229,6 +239,8 @@ export function renderTool(root, id, tool, announce) {
     const body = new FormData();
     const fileField = tool.multiple ? "files" : "file";
     for (const entry of state.files) body.append(fileField, entry.file, entry.file.name);
+    // The API takes one angle per file, in the same order.
+    if (tool.rotatable) body.append("rotations", state.files.map((entry) => entry.rotation).join(","));
     for (const field of tool.fields) {
       const value = state.values[field.name] ?? "";
       if (field.name === "angle") {
@@ -287,10 +299,10 @@ function kindIcon(file) {
 }
 
 function fileMeta(entry) {
-  const size = formatSize(entry.file.size);
-  if (typeof entry.pages !== "number") return size;
-  const pages = entry.pages === 1 ? t("page") : t("pages", { count: entry.pages });
-  return `${pages} · ${size}`;
+  const parts = [formatSize(entry.file.size)];
+  if (typeof entry.pages === "number") parts.unshift(entry.pages === 1 ? t("page") : t("pages", { count: entry.pages }));
+  if (entry.rotation) parts.push(t("rotated", { angle: entry.rotation }));
+  return parts.join(" · ");
 }
 
 function formatSize(bytes) {

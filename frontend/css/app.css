@@ -460,4 +460,20 @@ dialog form {
   .drop small {
     display: none;
   }
+
+  /* Pages, size and rotation go under the name, which keeps the width. */
+  .file {
+    grid-template-columns: 20px minmax(0, 1fr) auto;
+    row-gap: 0;
+  }
+
+  .file > .icon,
+  .row-actions {
+    grid-row: span 2;
+  }
+
+  .file .meta {
+    grid-column: 2;
+    grid-row: 2;
+  }
 }

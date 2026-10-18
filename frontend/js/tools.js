@@ -15,7 +15,7 @@ export const GROUPS = [
 ];
 
 export const TOOLS = {
-  merge: { icon: "files", endpoint: "merge", accepts: PDF_OR_IMAGE, multiple: true, fields: [] },
+  merge: { icon: "files", endpoint: "merge", accepts: PDF_OR_IMAGE, multiple: true, rotatable: true, fields: [] },
   split: {
     icon: "scissors",
     endpoint: "split",
