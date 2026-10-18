@@ -15,6 +15,7 @@ const modules = join(root, "node_modules");
 export const PHOSPHOR_ICONS = [
   "arrow-clockwise",
   "arrows-in",
+  "check",
   "caret-down",
   "caret-up",
   "drop-half",

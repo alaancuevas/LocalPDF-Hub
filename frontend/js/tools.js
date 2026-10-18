@@ -20,25 +20,10 @@ export const TOOLS = {
     icon: "scissors",
     endpoint: "split",
     accepts: PDF,
+    pagePicker: "select",
     fields: [{ name: "pages", label: "optionPages", hint: "optionPagesHint", type: "text", required: true }],
   },
-  rotate: {
-    icon: "arrow-clockwise",
-    endpoint: "rotate",
-    accepts: PDF,
-    fields: [
-      {
-        name: "angle",
-        label: "optionAngle",
-        type: "select",
-        options: [
-          ["90", "angle90"],
-          ["180", "angle180"],
-          ["270", "angle270"],
-        ],
-      },
-    ],
-  },
+  rotate: { icon: "arrow-clockwise", endpoint: "rotate", accepts: PDF, pagePicker: "rotate", fields: [] },
   compress: { icon: "arrows-in", endpoint: "compress", accepts: PDF, fields: [] },
   protect: {
     icon: "lock-simple",

@@ -62,6 +62,8 @@ let view;
 function show() {
   const id = currentTool();
   renderChrome();
+  // Frees the open PDF of the tool being left.
+  view?.destroy();
   view = renderTool(work, id, TOOLS[id], announce);
 }
 

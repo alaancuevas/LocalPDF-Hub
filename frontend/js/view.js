@@ -3,13 +3,17 @@
 import { ApiError, runTool } from "./api.js";
 import { t } from "./i18n.js";
 import { icon } from "./icons.js";
-import { pageCount } from "./pages.js";
+import { pageGrid } from "./pagegrid.js";
+import { openPages, pageCount } from "./pages.js";
+import { formatRanges, parseRanges } from "./ranges.js";
 import { accepts } from "./tools.js";
 
 const MAX_BYTES = 500 * 1024 * 1024;
 
 export function renderTool(root, id, tool, announce) {
   const state = { files: [], values: defaults(tool), status: "idle", result: null, message: "" };
+  // Split and Rotate: the open PDF, its thumbnails, and the pages picked or turned.
+  Object.assign(state, { doc: null, grid: null, selected: new Set(), anchor: null, angles: [] });
   const form = document.createElement("form");
   form.className = "work";
   form.noValidate = true;
@@ -20,11 +24,23 @@ export function renderTool(root, id, tool, announce) {
   // Option values live in the state so a redraw never loses what was typed.
   form.addEventListener("input", (event) => {
     if (event.target.name) state.values[event.target.name] = event.target.value;
+    // Typing pages marks them in the thumbnails, without a redraw that would move the caret.
+    if (event.target.name === "pages" && state.grid) {
+      state.selected = parseRanges(event.target.value, state.doc.count);
+      state.grid.sync();
+      updateFoot();
+    }
   });
   root.replaceChildren(form);
   draw();
-  // Lets a language change redraw the texts without dropping the files.
-  return { redraw: () => draw() };
+  return {
+    // Lets a language change redraw the texts without dropping the files.
+    redraw: () => {
+      state.grid?.sync();
+      draw();
+    },
+    destroy: closePages,
+  };
 
   function draw(focusSelector) {
     form.replaceChildren(header(), body(), footer());
@@ -51,6 +67,7 @@ export function renderTool(root, id, tool, announce) {
     }
     if (state.files.length) box.append(el("p", "section-label", t(tool.multiple ? "filesLabel" : "fileLabel")), fileList());
     if (tool.fields.length) box.append(optionFields());
+    if (state.grid) box.append(state.grid.element);
     return box;
   }
 
@@ -145,11 +162,58 @@ export function renderTool(root, id, tool, announce) {
       foot.append(clear);
     }
     const working = state.status === "working";
-    const primary = el("button", "primary", working ? t("working") : t(`${id}.action`));
-    primary.type = "submit";
-    primary.disabled = !state.files.length || working;
-    foot.append(primary);
+    state.primary = el("button", "primary", working ? t("working") : t(`${id}.action`));
+    state.primary.type = "submit";
+    state.primary.disabled = !canRun();
+    foot.append(state.primary);
     return foot;
+  }
+
+  function canRun() {
+    if (!state.files.length || state.status === "working") return false;
+    if (tool.pagePicker === "rotate") return state.angles.some((angle) => angle !== 0);
+    if (tool.pagePicker === "select" && state.grid) return state.selected.size > 0;
+    return true;
+  }
+
+  function updateFoot() {
+    state.summary.textContent = summary();
+    state.primary.disabled = !canRun();
+  }
+
+  function pagesChanged() {
+    if (tool.pagePicker === "select") {
+      state.values.pages = formatRanges(state.selected);
+      if (form.elements.pages) form.elements.pages.value = state.values.pages;
+    }
+    updateFoot();
+  }
+
+  function loadPages(entry) {
+    closePages();
+    openPages(entry.file).then((doc) => {
+      // A newer file may have replaced this one while it was opening.
+      if (state.files[0] !== entry) {
+        doc?.close();
+        return;
+      }
+      entry.pages = doc ? doc.count : null;
+      if (doc) {
+        state.doc = doc;
+        state.selected = parseRanges(state.values.pages ?? "", doc.count);
+        state.angles = Array(doc.count).fill(0);
+        state.grid = pageGrid({ mode: tool.pagePicker, doc, state, onChange: pagesChanged });
+      } else {
+        state.message = t("pagesUnreadable");
+      }
+      draw();
+    });
+  }
+
+  function closePages() {
+    state.grid?.destroy();
+    state.doc?.close();
+    Object.assign(state, { doc: null, grid: null, selected: new Set(), anchor: null, angles: [] });
   }
 
   function resultPanel() {
@@ -192,6 +256,10 @@ export function renderTool(root, id, tool, announce) {
         if (state.files.length) state.message = t("onlyOne");
         state.files = [entry];
       }
+      if (tool.pagePicker) {
+        loadPages(entry);
+        continue;
+      }
       // Counting pages can take a moment; only the affected texts are updated.
       pageCount(file).then((pages) => {
         entry.pages = pages;
@@ -208,6 +276,7 @@ export function renderTool(root, id, tool, announce) {
 
   function removeFile(index) {
     state.files.splice(index, 1);
+    if (tool.pagePicker) closePages();
     draw();
   }
 
@@ -230,7 +299,9 @@ export function renderTool(root, id, tool, announce) {
 
   function reset() {
     if (state.result) URL.revokeObjectURL(state.result.url);
+    closePages();
     Object.assign(state, { files: [], status: "idle", result: null, message: "" });
+    if (tool.pagePicker === "select") state.values.pages = "";
     draw();
   }
 
@@ -241,16 +312,9 @@ export function renderTool(root, id, tool, announce) {
     for (const entry of state.files) body.append(fileField, entry.file, entry.file.name);
     // The API takes one angle per file, in the same order.
     if (tool.rotatable) body.append("rotations", state.files.map((entry) => entry.rotation).join(","));
-    for (const field of tool.fields) {
-      const value = state.values[field.name] ?? "";
-      if (field.name === "angle") {
-        // The API takes one angle per page.
-        const pages = state.files[0].pages ?? 1;
-        body.append("rotations", Array(pages).fill(value).join(","));
-      } else {
-        body.append(field.name, value);
-      }
-    }
+    // Rotate takes one angle per page.
+    if (tool.pagePicker === "rotate") body.append("rotations", state.angles.join(","));
+    for (const field of tool.fields) body.append(field.name, state.values[field.name] ?? "");
     state.status = "working";
     state.message = "";
     draw();
@@ -269,10 +333,22 @@ export function renderTool(root, id, tool, announce) {
 
   function summary() {
     if (!state.files.length) return "";
+    if (state.grid) return pageSummary();
     const files = state.files.length === 1 ? t("summaryFile") : t("summaryFiles", { count: state.files.length });
     if (!state.files.every((entry) => typeof entry.pages === "number")) return files;
     const pages = state.files.reduce((sum, entry) => sum + entry.pages, 0);
     return `${files} · ${t("summaryPages", { count: pages })}`;
+  }
+
+  function pageSummary() {
+    const total = state.doc.count;
+    if (tool.pagePicker === "select") {
+      const count = state.selected.size;
+      return count ? t("pagesPicked", { count, total }) : t("pagesNone");
+    }
+    const count = state.angles.filter((angle) => angle !== 0).length;
+    if (!count) return t("pagesUnchanged");
+    return count === 1 ? t("pageTurned", { total }) : t("pagesTurned", { count, total });
   }
 }
 
