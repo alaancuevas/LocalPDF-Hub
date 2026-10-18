@@ -139,6 +139,8 @@ export function renderTool(root, id, tool, announce) {
       label.append(el("span", "field-label", t(field.label)));
       const control = field.type === "select" ? selectFor(field) : document.createElement("input");
       if (field.type !== "select") control.type = field.type;
+      // A PDF's password is not a login for this app: no saved passwords here.
+      if (field.type === "password") control.autocomplete = "off";
       control.name = field.name;
       control.required = Boolean(field.required);
       if (field.hint) control.placeholder = t(field.hint);
