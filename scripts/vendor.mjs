@@ -24,9 +24,11 @@ export const PHOSPHOR_ICONS = [
   "files",
   "gear-six",
   "image",
+  "images-square",
   "lock-simple",
   "lock-simple-open",
   "scissors",
+  "stack",
   "upload-simple",
   "x",
 ];

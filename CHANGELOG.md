@@ -13,6 +13,27 @@ All notable changes to LocalPDF Hub. Versions follow
 - Short movement that follows the state: new files fade in, reordered
   rows slide, the sidebar selection slides, and the result card draws its
   check. All of it stops when the system asks for reduced motion.
+- Image to PDF: page size (A4, US Letter, fit to image), orientation,
+  margin, and one PDF for all images or a ZIP with one PDF each.
+- TIFF images are accepted.
+
+### Changed
+- Merge is now three tools: Merge PDF (PDFs only), Image to PDF, and
+  Merge / convert all (PDFs and images), which is where the app opens.
+- Images keep their quality: JPEG photos go in without re-encoding and
+  without their location and camera data, PNG and TIFF go in lossless,
+  and transparent areas show as white instead of a hidden colour.
+- Images in Merge / convert all are placed like in Image to PDF, on A4 by
+  default.
+- A job takes up to 200 images of up to 50 megapixels each, and each image
+  counts as a page towards the 2000-page limit.
+- The images of one job may add up to 1.5 GB in the result; past that the
+  job stops with a clear error instead of running out of memory.
+
+### Security
+- Images are recognised by their content and only JPEG, PNG, TIFF and
+  HEIC/HEIF are opened, so a PostScript file renamed to .png is refused
+  instead of reaching Ghostscript.
 
 ## [4.0.1] - 2026-10-18
 

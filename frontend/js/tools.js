@@ -2,20 +2,70 @@
 // options form and the request body.
 
 const PDF = { extensions: [".pdf"], label: "PDF" };
-const PDF_OR_IMAGE = {
-  extensions: [".pdf", ".png", ".jpg", ".jpeg", ".jfif", ".heic", ".heif"],
-  label: "PDF, JPG, PNG, HEIC",
-};
+const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".jfif", ".heic", ".heif", ".tif", ".tiff"];
+const IMAGE = { extensions: IMAGE_EXTENSIONS, label: "JPG, PNG, HEIC, TIFF" };
+const PDF_OR_IMAGE = { extensions: [".pdf", ...IMAGE_EXTENSIONS], label: "PDF, JPG, PNG, HEIC, TIFF" };
+
+// Page options of Image to PDF, with its defaults first.
+const PAGE_FIELDS = [
+  {
+    name: "pagesize",
+    label: "optionPageSize",
+    type: "select",
+    options: [
+      ["A4", "pageSizeA4"],
+      ["letter", "pageSizeLetter"],
+      ["fit", "pageSizeFit"],
+    ],
+  },
+  {
+    name: "orientation",
+    label: "optionOrientation",
+    type: "select",
+    options: [
+      ["portrait", "orientationPortrait"],
+      ["landscape", "orientationLandscape"],
+    ],
+    // A page that fits the image has no orientation of its own.
+    disabledWhen: { field: "pagesize", value: "fit" },
+  },
+  {
+    name: "margin",
+    label: "optionMargin",
+    type: "select",
+    options: [
+      ["0", "marginNone"],
+      ["20", "marginSmall"],
+      ["40", "marginLarge"],
+    ],
+  },
+];
 const WORD = { extensions: [".docx"], label: "DOCX" };
 
 export const GROUPS = [
-  { label: "groupOrganize", tools: ["merge", "split", "rotate", "compress"] },
+  { label: "groupOrganize", tools: ["merge", "mergeAll", "split", "rotate", "compress"] },
   { label: "groupSecurity", tools: ["protect", "unlock", "watermark"] },
-  { label: "groupConvert", tools: ["extractImages", "toImages", "toWord", "fromWord"] },
+  { label: "groupConvert", tools: ["imagesToPdf", "extractImages", "toImages", "toWord", "fromWord"] },
 ];
 
 export const TOOLS = {
-  merge: { icon: "files", endpoint: "merge", accepts: PDF_OR_IMAGE, multiple: true, rotatable: true, fields: [] },
+  merge: { icon: "files", endpoint: "merge", accepts: PDF, multiple: true, rotatable: true, fields: [] },
+  mergeAll: {
+    icon: "stack",
+    endpoint: "merge",
+    accepts: PDF_OR_IMAGE,
+    multiple: true,
+    rotatable: true,
+    fields: PAGE_FIELDS,
+  },
+  imagesToPdf: {
+    icon: "images-square",
+    endpoint: "images-to-pdf",
+    accepts: IMAGE,
+    multiple: true,
+    rotatable: true,
+    fields: [...PAGE_FIELDS, { name: "merge_after", label: "optionMergeAfter", type: "checkbox", value: true }],
+  },
   split: {
     icon: "scissors",
     endpoint: "split",

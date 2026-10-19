@@ -440,6 +440,27 @@ button.page[aria-pressed="true"] .page-number {
   font-weight: 600;
 }
 
+.field-check {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.field-check .field-label {
+  font-weight: 400;
+}
+
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 input[type="text"],
 input[type="password"],
 select {

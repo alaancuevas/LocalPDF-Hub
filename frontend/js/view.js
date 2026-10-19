@@ -28,7 +28,9 @@ export function renderTool(root, id, tool, announce, options = {}) {
   });
   // Option values live in the state so a redraw never loses what was typed.
   form.addEventListener("input", (event) => {
-    if (event.target.name) state.values[event.target.name] = event.target.value;
+    const { name, type, checked, value } = event.target;
+    if (name) state.values[name] = type === "checkbox" ? String(checked) : value;
+    syncDisabled();
     // Typing pages marks them in the thumbnails, without a redraw that would move the caret.
     if (event.target.name === "pages" && state.grid) {
       state.selected = parseRanges(event.target.value, state.doc.count);
@@ -153,6 +155,14 @@ export function renderTool(root, id, tool, announce, options = {}) {
       control.required = Boolean(field.required);
       if (field.hint) control.placeholder = t(field.hint);
       if (field.type === "range") Object.assign(control, { min: field.min, max: field.max, step: field.step });
+      if (field.type === "checkbox") {
+        // A tick box reads better before its text.
+        label.className = "field field-check";
+        control.checked = state.values[field.name] === "true";
+        label.prepend(control);
+        box.append(label);
+        continue;
+      }
       control.value = state.values[field.name] ?? "";
       label.append(control);
       if (field.type === "range") {
@@ -164,7 +174,17 @@ export function renderTool(root, id, tool, announce, options = {}) {
       }
       box.append(label);
     }
+    queueMicrotask(syncDisabled);
     return box;
+  }
+
+  // Fields that do not apply to what another field says, such as orientation for a page that fits the image.
+  function syncDisabled() {
+    for (const field of tool.fields) {
+      if (!field.disabledWhen || !form.elements[field.name]) continue;
+      const { field: other, value } = field.disabledWhen;
+      form.elements[field.name].disabled = state.values[other] === value;
+    }
   }
 
   function footer() {
@@ -305,7 +325,10 @@ export function renderTool(root, id, tool, announce, options = {}) {
     const file = resultFile();
     // Unlock only makes sense for a protected result, and Protect for one that is not.
     const skip = new Set([id, state.result.locked ? "protect" : "unlock"]);
-    return Object.keys(TOOLS).filter((other) => !skip.has(other) && accepts(TOOLS[other], file));
+    // Nor the other tool on the same endpoint: Merge PDF and Merge everything would only redo the job.
+    return Object.keys(TOOLS).filter(
+      (other) => !skip.has(other) && TOOLS[other].endpoint !== tool.endpoint && accepts(TOOLS[other], file),
+    );
   }
 
   function resultFile() {

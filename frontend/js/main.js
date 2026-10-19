@@ -13,7 +13,8 @@ const settings = document.querySelector("#settings");
 
 function currentTool() {
   const id = location.hash.slice(1);
-  return id in TOOLS ? id : "merge";
+  // Opens on the tool that takes both PDFs and photos, as the single Merge did before 4.1.
+  return id in TOOLS ? id : "mergeAll";
 }
 
 function announce(text) {
