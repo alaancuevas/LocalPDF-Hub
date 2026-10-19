@@ -3,7 +3,7 @@
 All notable changes to LocalPDF Hub. Versions follow
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [4.1.0] - 2026-10-19
 
 ### Added
 - The result is a card: a thumbnail of the first page, the page count, the
