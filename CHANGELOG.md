@@ -5,12 +5,29 @@ All notable changes to LocalPDF Hub. Versions follow
 
 ## [Unreleased]
 
+### Added
+- Watermark options: position in a 3 × 3 grid or a mosaic over the whole
+  page, rotation (0, 45, 90, 180, 270), size, colour, and which pages.
+- PDF to images: PNG or JPG, at 72, 150 or 300 dpi.
+- Protect asks for the password twice.
+
 ### Changed
 - Merge / convert all is now called Convert all.
+- A watermark is tilted 45° by default instead of 35°.
 
 ### Fixed
 - A download whose name carries a malformed escape keeps its plain name
   instead of failing.
+- The watermark is no longer cut off on pages whose box does not start at
+  (0, 0), and it sits in the middle of what is seen on cropped or rotated
+  pages.
+- Split refuses a selection of more than 2000 pages at once instead of
+  building it in memory.
+- Two PDF to images jobs at the same time no longer risk closing the app:
+  the PDF renderer takes one job at a time.
+- Protect accepts a PDF with only an owner password (it restricts printing
+  or copying) and keeps those restrictions. A PDF that needs a password to
+  open is told to be unlocked first.
 
 ## [4.1.0] - 2026-10-19
 

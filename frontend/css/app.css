@@ -463,6 +463,7 @@ select:disabled {
 
 input[type="text"],
 input[type="password"],
+input[type="number"],
 select {
   height: 36px;
   padding: 0 var(--space-3);
@@ -471,6 +472,16 @@ select {
   background: var(--surface);
   color: var(--text);
   font: inherit;
+}
+
+input[type="color"] {
+  width: 64px;
+  height: 36px;
+  padding: 2px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
 }
 
 input[type="range"] {

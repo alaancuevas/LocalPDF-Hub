@@ -31,6 +31,7 @@ export function renderTool(root, id, tool, announce, options = {}) {
     const { name, type, checked, value } = event.target;
     if (name) state.values[name] = type === "checkbox" ? String(checked) : value;
     syncDisabled();
+    syncMatches();
     // Typing pages marks them in the thumbnails, without a redraw that would move the caret.
     if (event.target.name === "pages" && state.grid) {
       state.selected = parseRanges(event.target.value, state.doc.count);
@@ -154,7 +155,9 @@ export function renderTool(root, id, tool, announce, options = {}) {
       control.name = field.name;
       control.required = Boolean(field.required);
       if (field.hint) control.placeholder = t(field.hint);
-      if (field.type === "range") Object.assign(control, { min: field.min, max: field.max, step: field.step });
+      if (field.type === "range" || field.type === "number") {
+        Object.assign(control, { min: field.min, max: field.max, step: field.step });
+      }
       if (field.type === "checkbox") {
         // A tick box reads better before its text.
         label.className = "field field-check";
@@ -175,7 +178,19 @@ export function renderTool(root, id, tool, announce, options = {}) {
       box.append(label);
     }
     queueMicrotask(syncDisabled);
+    // A redraw builds new controls: the mismatch must be set again from the state.
+    queueMicrotask(syncMatches);
     return box;
+  }
+
+  // A field that repeats another, such as the password typed twice, is invalid until both match.
+  function syncMatches() {
+    for (const field of tool.fields) {
+      const control = form.elements[field.name];
+      if (!field.matches || !control) continue;
+      const same = (state.values[field.name] ?? "") === (state.values[field.matches] ?? "");
+      control.setCustomValidity(same ? "" : t("passwordMismatch"));
+    }
   }
 
   // Fields that do not apply to what another field says, such as orientation for a page that fits the image.
@@ -505,6 +520,7 @@ export function renderTool(root, id, tool, announce, options = {}) {
   }
 
   async function run() {
+    syncMatches();
     if (!form.reportValidity()) return;
     const locked = state.files.filter((entry) => entry.locked);
     if (locked.length) {
@@ -521,7 +537,9 @@ export function renderTool(root, id, tool, announce, options = {}) {
     if (tool.rotatable) body.append("rotations", state.files.map((entry) => entry.rotation).join(","));
     // Rotate takes one angle per page.
     if (tool.pagePicker === "rotate") body.append("rotations", state.angles.join(","));
-    for (const field of tool.fields) body.append(field.name, state.values[field.name] ?? "");
+    for (const field of tool.fields) {
+      if (field.send !== false) body.append(field.name, state.values[field.name] ?? "");
+    }
     state.status = "working";
     state.message = "";
     draw();

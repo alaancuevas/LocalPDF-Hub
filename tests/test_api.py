@@ -7,15 +7,23 @@ implementation is reorganised they must keep passing unchanged.
 import io
 import mimetypes
 import re
+import threading
+import time
+import tracemalloc
 import zipfile
+from concurrent.futures import ThreadPoolExecutor
 
+import pypdfium2 as pdfium
 import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
-from pypdf import PdfReader, PdfWriter
+from pypdf import PasswordType, PdfReader, PdfWriter
+from pypdf.constants import UserAccessPermissions
 
 from localpdf_hub import platform as host
+from localpdf_hub import settings
 from localpdf_hub.app import create_app
+from localpdf_hub.tools import images
 
 ORIGIN = "http://127.0.0.1:8000"
 
@@ -178,6 +186,58 @@ def test_protect_uses_aes_256(client):
     assert reader.decrypt("s3cret")
 
 
+def owner_only(algorithm: str, permissions: UserAccessPermissions) -> bytes:
+    """A PDF that opens without a password and restricts what can be done with it."""
+    writer = PdfWriter(clone_from=PdfReader(io.BytesIO(pdf(1))))
+    writer.encrypt(
+        user_password="", owner_password="owner", algorithm=algorithm, permissions_flag=permissions
+    )
+    buf = io.BytesIO()
+    writer.write(buf)
+    return buf.getvalue()
+
+
+NO_PRINT_NO_COPY = (
+    UserAccessPermissions.all()
+    & ~UserAccessPermissions.PRINT
+    & ~UserAccessPermissions.EXTRACT
+    & ~UserAccessPermissions.EXTRACT_TEXT_AND_GRAPHICS
+)
+
+
+@pytest.mark.parametrize("algorithm", ["RC4-128", "AES-256"])
+def test_protect_keeps_the_restrictions_of_an_owner_only_pdf(client, algorithm):
+    source = owner_only(algorithm, NO_PRINT_NO_COPY)
+    original = PdfReader(io.BytesIO(source))
+    original.decrypt("")
+    response = post(client, "protect", one("a.pdf", source), password="nueva")
+    assert response.status_code == 200, response.text
+    assert PdfReader(io.BytesIO(response.content)).decrypt("") == PasswordType.NOT_DECRYPTED
+    reader = PdfReader(io.BytesIO(response.content))
+    assert reader.decrypt("nueva") == PasswordType.USER_PASSWORD
+    assert reader.user_access_permissions == original.user_access_permissions
+    assert PdfReader(io.BytesIO(response.content)).decrypt("owner") == PasswordType.NOT_DECRYPTED
+    # A second reader agrees on what is allowed.
+    document = pdfium.PdfDocument(response.content, password="nueva")
+    allowed = pdfium.raw.FPDF_GetDocPermissions(document) & 0xFFFFFFFF
+    assert allowed == int(original.user_access_permissions) & 0xFFFFFFFF
+
+
+def test_protect_an_owner_only_pdf_without_restrictions(client):
+    response = post(
+        client,
+        "protect",
+        one("a.pdf", owner_only("AES-256", UserAccessPermissions.all())),
+        password="nueva",
+    )
+    assert PdfReader(io.BytesIO(response.content)).decrypt("nueva") == PasswordType.OWNER_PASSWORD
+
+
+def test_protect_a_pdf_that_needs_a_password(client):
+    response = post(client, "protect", one("a.pdf", encrypted(pdf(1))), password="nueva")
+    assert_error(response, 400, "ERR_ENCRYPTED")
+
+
 def test_unlock_round_trip(client):
     locked = post(client, "protect", one("a.pdf", pdf(2)), password="s3cret").content
     response = post(client, "unlock", one("a.pdf", locked), password="s3cret")
@@ -279,6 +339,103 @@ def test_watermark_rejects_bad_options(client, fields):
     assert_error(response, 400, "ERR_INVALID_INPUT")
 
 
+def test_watermark_options_left_empty_mean_the_defaults(client):
+    # The UI sends every option, "" when it is left empty.
+    fields = {"position": "", "rotation": "", "size": "", "color": "", "pages": ""}
+    response = post(client, "watermark", one("a.pdf", pdf(1)), text="DRAFT", **fields)
+    assert response.status_code == 200, response.text
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"size": "nan"},
+        {"size": "7"},
+        {"rotation": "30"},
+        {"position": "middle"},
+        {"color": "#12345"},
+    ],
+)
+def test_watermark_rejects_options_outside_the_contract(client, fields):
+    response = post(client, "watermark", one("a.pdf", pdf(1)), text="DRAFT", **fields)
+    assert_error(response, 400, "ERR_INVALID_INPUT")
+
+
+def test_watermark_that_does_not_fit_has_its_own_code(client):
+    response = post(
+        client,
+        "watermark",
+        one("a.pdf", pdf(1, size=612)),
+        text="x" * 40,
+        position="top-left",
+        size="200",
+    )
+    assert_error(response, 400, "ERR_MARK_TOO_LARGE")
+
+
+# --- page selections ---
+
+
+def pdf_of_widths(widths: list[int]) -> bytes:
+    writer = PdfWriter()
+    for width in widths:
+        writer.add_blank_page(width=width, height=100)
+    buf = io.BytesIO()
+    writer.write(buf)
+    return buf.getvalue()
+
+
+def format_ranges(pages: list[int]) -> str:
+    """frontend/js/ranges.js formatRanges: the text the page picker puts in the field."""
+    parts, i = [], 0
+    while i < len(pages):
+        j = i
+        while j + 1 < len(pages) and pages[j + 1] == pages[j] + 1:
+            j += 1
+        parts.append(str(pages[i]) if i == j else f"{pages[i]}-{pages[j]}")
+        i = j + 1
+    return ", ".join(parts)
+
+
+@pytest.mark.parametrize(
+    "chosen",
+    [[p for p in range(1, 2001) if p % 2], [p for p in range(1, 2001) if p % 3]],
+    ids=["odd pages", "two of every three"],
+)
+def test_split_takes_the_longest_selections_the_picker_writes(client, chosen):
+    response = post(client, "split", one("a.pdf", pdf(2000)), pages=format_ranges(chosen))
+    assert response.status_code == 200, response.text
+    assert len(pages_of(response)) == len(chosen)
+
+
+def test_split_keeps_the_order_asked(client):
+    response = post(client, "split", one("a.pdf", pdf_of_widths([101, 102, 103])), pages="3,1")
+    assert [float(page.mediabox.width) for page in pages_of(response)] == [103, 101]
+
+
+def test_split_stops_a_selection_longer_than_the_page_limit(client):
+    response = post(client, "split", one("a.pdf", pdf(2000)), pages="1-2000,1-2000")
+    assert_error(response, 413, "ERR_TOO_MANY_PAGES")
+
+
+def test_watermark_counts_a_repeated_selection_once(client):
+    response = post(client, "watermark", one("a.pdf", pdf(2000)), text="X", pages="1-2000,1-2000")
+    assert response.status_code == 200, response.text
+
+
+@pytest.mark.parametrize(("tool", "fields"), [("split", {}), ("watermark", {"text": "X"})])
+def test_a_megabyte_of_pages_costs_little(client, tool, fields):
+    spec = "1," * 500_000
+    tracemalloc.start()
+    started = time.monotonic()
+    response = post(client, tool, one("a.pdf", pdf(1)), pages=spec, **fields)
+    elapsed = time.monotonic() - started
+    _, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    assert response.status_code in (200, 413), response.text
+    assert elapsed < 1 and peak < 50 * 1024 * 1024, f"{elapsed:.2f} s, {peak / 1e6:.0f} MB"
+
+
 # --- images ---
 
 
@@ -300,6 +457,103 @@ def test_to_images_returns_one_png_per_page(client):
     response = post(client, "to-images", one("a.pdf", pdf(3)))
     with zipfile.ZipFile(io.BytesIO(response.content)) as zf:
         assert len(zf.namelist()) == 3
+
+
+def rendered(response) -> list[tuple[str, bytes]]:
+    assert response.status_code == 200, response.text
+    with zipfile.ZipFile(io.BytesIO(response.content)) as zf:
+        return [(name, zf.read(name)) for name in zf.namelist()]
+
+
+def side(data: bytes) -> tuple[int, int]:
+    with Image.open(io.BytesIO(data)) as image:
+        return image.size
+
+
+def a4_pdf() -> bytes:
+    return pdf_of_size(595, 842)
+
+
+def pdf_of_size(width: float, height: float) -> bytes:
+    writer = PdfWriter()
+    writer.add_blank_page(width=width, height=height)
+    buf = io.BytesIO()
+    writer.write(buf)
+    return buf.getvalue()
+
+
+def test_to_images_as_jpg(client):
+    [(name, data)] = rendered(post(client, "to-images", one("a.pdf", a4_pdf()), format="jpg"))
+    assert name.endswith(".jpg") and data[:2] == b"\xff\xd8"
+
+
+def test_to_images_resolution_follows_dpi(client):
+    sizes = {
+        dpi: side(rendered(post(client, "to-images", one("a.pdf", a4_pdf()), dpi=dpi))[0][1])
+        for dpi in ("72", "150", "300")
+    }
+    assert abs(sizes["300"][0] - 2 * sizes["150"][0]) <= 1
+    assert abs(sizes["72"][0] - 0.48 * sizes["150"][0]) <= 1
+
+
+def test_to_images_empty_options_mean_png_at_150_dpi(client):
+    [(name, data)] = rendered(post(client, "to-images", one("a.pdf", a4_pdf()), format="", dpi=""))
+    assert name.endswith(".png") and abs(side(data)[0] - 595 * 150 / 72) <= 1
+
+
+@pytest.mark.parametrize("width", [40000, 55850.2], ids=["40000 pt", "55850.2 pt"])
+def test_to_images_keeps_a_very_long_page_under_the_jpeg_limit(client, width):
+    # Pillow cannot write a JPEG side over 65500 px, and pdfium rounds the bitmap size up.
+    [(_, data)] = rendered(
+        post(client, "to-images", one("a.pdf", pdf_of_size(width, 20)), format="jpg")
+    )
+    assert max(side(data)) <= 65500
+
+
+def test_to_images_stops_at_the_result_limit(client, monkeypatch):
+    noise = io.BytesIO()
+    Image.effect_noise((800, 800), 100).convert("RGB").save(noise, "PDF", resolution=72)
+    monkeypatch.setattr(settings, "MAX_RESULT_BYTES", 1024 * 1024)
+    response = post(client, "to-images", one("a.pdf", noise.getvalue()), dpi="300")
+    assert_error(response, 413, "ERR_RESULT_TOO_LARGE")
+
+
+@pytest.mark.parametrize("fields", [{"dpi": "96"}, {"format": "gif"}, {"dpi": "150.0"}])
+def test_to_images_rejects_options_outside_the_contract(client, fields):
+    assert_error(
+        post(client, "to-images", one("a.pdf", pdf(1)), **fields), 400, "ERR_INVALID_INPUT"
+    )
+
+
+def test_two_renders_never_call_pdfium_at_once(tmp_path, monkeypatch):
+    # pdfium is not thread-safe, not even across documents, and two light jobs can run together.
+    # A crash is a poor oracle: count the threads inside the pdfium section instead.
+    inside, peak, guard = 0, 0, threading.Lock()
+    real = images._capped_scale
+
+    def counted(*args, **kwargs):
+        nonlocal inside, peak
+        with guard:
+            inside += 1
+            peak = max(peak, inside)
+        time.sleep(0.02)
+        with guard:
+            inside -= 1
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(images, "_capped_scale", counted)
+    source = tmp_path / "a.pdf"
+    source.write_bytes(pdf(4, size=600))
+    options = images.parse_render_options("png", "150")
+
+    def render(index: int) -> int:
+        folder = tmp_path / str(index)
+        folder.mkdir()
+        return images.render_pages(source, options, folder).stat().st_size
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        assert all(list(pool.map(render, range(4))))
+    assert peak == 1
 
 
 # --- Word ---

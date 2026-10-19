@@ -152,9 +152,18 @@ async def unlock(file: Upload, password_: Annotated[str, Form(alias="password")]
 
 @router.post("/watermark")
 async def add_watermark(
-    file: Upload, text: Annotated[str, Form()], opacity: Annotated[float, Form()] = 0.3
+    file: Upload,
+    text: Annotated[str, Form()],
+    opacity: Annotated[float, Form()] = 0.3,
+    # Text fields, parsed by the tool: the UI sends "" for an option left empty.
+    position: Annotated[str, Form()] = "",
+    rotation: Annotated[str, Form()] = "",
+    size: Annotated[str, Form()] = "",
+    color: Annotated[str, Form()] = "",
+    pages_: Annotated[str, Form(alias="pages")] = "",
 ) -> FileResponse:
-    return await _run([file], watermark.watermark, text, opacity)
+    layout = watermark.parse_layout(position, rotation, size, color, pages_)
+    return await _run([file], watermark.watermark, text, opacity, layout)
 
 
 @router.post("/extract-images")
@@ -163,8 +172,13 @@ async def extract_images(file: Upload) -> FileResponse:
 
 
 @router.post("/to-images")
-async def to_images(file: Upload) -> FileResponse:
-    return await _run([file], images.render_pages)
+async def to_images(
+    file: Upload,
+    format_: Annotated[str, Form(alias="format")] = "",
+    dpi: Annotated[str, Form()] = "",
+) -> FileResponse:
+    options = images.parse_render_options(format_, dpi)
+    return await _run([file], images.render_pages, options)
 
 
 @router.post("/to-word")

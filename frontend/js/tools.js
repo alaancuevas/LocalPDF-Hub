@@ -80,7 +80,18 @@ export const TOOLS = {
     endpoint: "protect",
     accepts: PDF,
     takesPassword: true,
-    fields: [{ name: "password", label: "optionPassword", type: "password", required: true }],
+    // Typed twice; only the first one goes to the server.
+    fields: [
+      { name: "password", label: "optionPassword", type: "password", required: true },
+      {
+        name: "password2",
+        label: "optionPasswordRepeat",
+        type: "password",
+        required: true,
+        matches: "password",
+        send: false,
+      },
+    ],
   },
   unlock: {
     icon: "lock-simple-open",
@@ -93,13 +104,75 @@ export const TOOLS = {
     icon: "watermark",
     endpoint: "watermark",
     accepts: PDF,
+    // Defaults are the API's, so an untouched form and an empty field ask for the same mark.
     fields: [
       { name: "text", label: "optionText", type: "text", required: true },
+      {
+        name: "position",
+        label: "optionPosition",
+        type: "select",
+        value: "center",
+        options: [
+          ["center", "positionCenter"],
+          ["top-left", "positionTopLeft"],
+          ["top", "positionTop"],
+          ["top-right", "positionTopRight"],
+          ["left", "positionLeft"],
+          ["right", "positionRight"],
+          ["bottom-left", "positionBottomLeft"],
+          ["bottom", "positionBottom"],
+          ["bottom-right", "positionBottomRight"],
+          ["mosaic", "positionMosaic"],
+        ],
+      },
+      {
+        name: "rotation",
+        label: "optionRotation",
+        type: "select",
+        value: "45",
+        options: [
+          ["0", "rotation0"],
+          ["45", "rotation45"],
+          ["90", "rotation90"],
+          ["180", "rotation180"],
+          ["270", "rotation270"],
+        ],
+      },
+      { name: "size", label: "optionSize", hint: "optionSizeHint", type: "number", min: 8, max: 200, step: 1 },
+      { name: "color", label: "optionColor", type: "color", value: "#000000" },
       { name: "opacity", label: "optionOpacity", type: "range", min: 0.05, max: 1, step: 0.05, value: 0.3 },
+      { name: "pages", label: "optionMarkPages", hint: "optionMarkPagesHint", type: "text" },
     ],
   },
   extractImages: { icon: "extract-images", endpoint: "extract-images", accepts: PDF, fields: [] },
-  toImages: { icon: "pdf-to-images", endpoint: "to-images", accepts: PDF, fields: [] },
+  toImages: {
+    icon: "pdf-to-images",
+    endpoint: "to-images",
+    accepts: PDF,
+    fields: [
+      {
+        name: "format",
+        label: "optionFormat",
+        type: "select",
+        value: "png",
+        options: [
+          ["png", "formatPng"],
+          ["jpg", "formatJpg"],
+        ],
+      },
+      {
+        name: "dpi",
+        label: "optionResolution",
+        type: "select",
+        value: "150",
+        options: [
+          ["72", "resolution72"],
+          ["150", "resolution150"],
+          ["300", "resolution300"],
+        ],
+      },
+    ],
+  },
   toWord: { icon: "file-doc", endpoint: "to-word", accepts: PDF, fields: [] },
   fromWord: { icon: "file-pdf", endpoint: "from-word", accepts: WORD, multiple: true, fields: [] },
 };
