@@ -5,9 +5,9 @@ comprimir, proteger y convertir, sin subir tus archivos a ningún lado.
 
 [English](README.md)
 
-![Unir un informe, una factura y una foto, en el tema claro](docs/screenshot-light.png)
+![Convertir un informe, una factura, una foto y un plano en un solo PDF, en el tema claro](docs/screenshot-light.png)
 
-![Elegir las páginas 2 a 4 para dividir un informe, en el tema oscuro](docs/screenshot-dark.png)
+![Opciones de la marca de agua: mosaico rojo a 45°, en el tema oscuro](docs/screenshot-dark.png)
 
 Las capturas muestran la interfaz en inglés; en Ajustes se cambia a español.
 
@@ -15,10 +15,11 @@ Las capturas muestran la interfaz en inglés; en Ajustes se cambia a español.
 
 | Organizar | Seguridad | Convertir |
 |---|---|---|
-| Unir PDF e imágenes (JPG, PNG, HEIC) | Proteger con contraseña (AES-256) | Extraer imágenes |
-| Dividir por páginas o rangos | Desbloquear un PDF del que tenés la contraseña | PDF a imágenes |
-| Rotar páginas | Marca de agua | PDF a Word |
-| Comprimir | | Word a PDF |
+| Unir PDF | Proteger con contraseña (AES-256), escrita dos veces | Convertir todo: PDF e imágenes en un solo PDF |
+| Dividir por páginas o rangos | Desbloquear un PDF del que tenés la contraseña | Imagen a PDF (JPG, PNG, HEIC, TIFF) |
+| Rotar páginas | Marca de agua: posición en grilla o mosaico, rotación, tamaño, color y páginas | Extraer imágenes |
+| Comprimir | | PDF a imágenes (PNG o JPG, de 72 a 300 ppp) |
+| | | PDF a Word y Word a PDF |
 
 ## Tus archivos no salen de tu computadora
 

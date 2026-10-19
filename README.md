@@ -5,18 +5,19 @@ and convert, without uploading your files anywhere.
 
 [Español](README.es.md)
 
-![Merging a report, an invoice and a photo, in the light theme](docs/screenshot-light.png)
+![Converting a report, an invoice, a photo and a floor plan into one PDF, in the light theme](docs/screenshot-light.png)
 
-![Choosing pages 2 to 4 to split a report, in the dark theme](docs/screenshot-dark.png)
+![Watermark options: a red mosaic turned 45°, in the dark theme](docs/screenshot-dark.png)
 
 ## What it does
 
 | Organize | Security | Convert |
 |---|---|---|
-| Merge PDFs and images (JPG, PNG, HEIC) | Protect with a password (AES-256) | Extract images |
-| Split by pages or ranges | Unlock a PDF you have the password for | PDF to images |
-| Rotate pages | Watermark | PDF to Word |
-| Compress | | Word to PDF |
+| Merge PDFs | Protect with a password (AES-256), typed twice | Convert all: PDFs and images into one PDF |
+| Split by pages or ranges | Unlock a PDF you have the password for | Image to PDF (JPG, PNG, HEIC, TIFF) |
+| Rotate pages | Watermark: grid position or mosaic, rotation, size, colour and pages | Extract images |
+| Compress | | PDF to images (PNG or JPG, 72 to 300 dpi) |
+| | | PDF to Word and Word to PDF |
 
 ## Your files stay on your computer
 
