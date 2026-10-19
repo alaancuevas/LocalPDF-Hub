@@ -295,6 +295,7 @@ def associated_alpha_tiff() -> bytes:
         ),
         ("la.tif", associated_alpha_tiff()),
     ],
+    ids=["rgba.png", "la.png", "palette.png", "key.png", "la.tif"],
 )
 def test_transparent_pixels_come_out_white(client, name, data):
     if name == "la.tif":
@@ -374,6 +375,7 @@ def broken_huffman_table() -> bytes:
         ("huffman.jpg", broken_huffman_table()),
         ("junk.png", b"not an image at all"),
     ],
+    ids=["cut.jpg", "huffman.jpg", "junk.png"],
 )
 def test_a_broken_image_is_refused(client, name, data):
     assert_error(post(client, "images-to-pdf", [(name, data)]), 400, "ERR_INVALID_INPUT")
@@ -470,7 +472,7 @@ def encrypted_pdf() -> bytes:
     return buf.getvalue()
 
 
-@pytest.mark.parametrize("data", [blank_pdf(), encrypted_pdf()])
+@pytest.mark.parametrize("data", [blank_pdf(), encrypted_pdf()], ids=["plain", "encrypted"])
 def test_a_pdf_is_not_an_image(client, data):
     assert_error(post(client, "images-to-pdf", [("a.pdf", data)]), 400, "ERR_INVALID_INPUT")
 
