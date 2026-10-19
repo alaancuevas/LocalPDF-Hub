@@ -67,8 +67,17 @@ def check_page_limit(paths: list[Path], opens_encrypted: bool = False) -> None:
     One with only an owner password opens: pypdf tries the empty password.
     """
     total = 0
+    images = 0
     for path in paths:
-        if path.suffix.lower() != ".pdf":
+        suffix = path.suffix.lower()
+        if suffix in settings.IMAGE_SUFFIXES:
+            # Each image becomes one page.
+            images += 1
+            total += 1
+            check_image_count(images)
+            check_page_count(total)
+            continue
+        if suffix != ".pdf":
             continue
         try:
             total += len(PdfReader(path).pages)
@@ -80,6 +89,22 @@ def check_page_limit(paths: list[Path], opens_encrypted: bool = False) -> None:
             # Unreadable: the tool itself reports the right error.
             continue
         check_page_count(total)
+
+
+def check_image_count(total: int) -> None:
+    if total > settings.MAX_IMAGES:
+        raise AppError(
+            errors.TOO_MANY_IMAGES,
+            f"Jobs over {settings.MAX_IMAGES} images are not supported.",
+        )
+
+
+def check_result_size(total: int) -> None:
+    if total > settings.MAX_RESULT_BYTES:
+        raise AppError(
+            errors.RESULT_TOO_LARGE,
+            f"Results over {settings.MAX_RESULT_BYTES // (1024 * 1024)} MB are not supported.",
+        )
 
 
 def check_page_count(total: int) -> None:

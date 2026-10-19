@@ -9,14 +9,16 @@ from fastapi import APIRouter, File, Form, UploadFile
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 
-from localpdf_hub import limits, settings, workspace
+from localpdf_hub import errors, limits, settings, workspace
 from localpdf_hub import platform as host
-from localpdf_hub.tools import images, merge, pages, password, watermark, word
+from localpdf_hub.errors import AppError
+from localpdf_hub.tools import images, images_pdf, merge, pages, password, watermark, word
 from localpdf_hub.tools.pdf_files import parse_rotations
 
 router = APIRouter(prefix="/api/v1/pdf")
 
-# Measured peaks: PDF to Word 2.15 GB and merge 1.66 GB on a 555 MB file.
+# Measured peaks: PDF to Word 2.15 GB and merge 1.66 GB on a 555 MB file;
+# images to PDF 1.74 GB on 20 TIFFs of 50 MP.
 _HEAVY = 2
 _LIGHT = 1
 
@@ -28,9 +30,12 @@ _MEDIA_TYPES = {
 
 Upload = Annotated[UploadFile, File()]
 Uploads = Annotated[list[UploadFile], File()]
+PageSize = Annotated[str, Form()]
+Orientation = Annotated[str, Form()]
+Margin = Annotated[int, Form()]
 
 # Tools that work on every uploaded file; the rest take the first one.
-_TAKES_ALL_INPUTS = {merge.merge, word.from_word}
+_TAKES_ALL_INPUTS = {merge.merge, images_pdf.images_to_pdf, word.from_word}
 # Tools that take a password and so must receive encrypted PDFs.
 _OPENS_ENCRYPTED = {password.protect, password.unlock}
 
@@ -78,8 +83,40 @@ def _stem(upload: UploadFile) -> str:
 
 
 @router.post("/merge")
-async def merge_files(files: Uploads, rotations: Annotated[str, Form()] = "") -> FileResponse:
-    return await _run(files, merge.merge, parse_rotations(rotations), weight=_HEAVY)
+async def merge_files(
+    files: Uploads,
+    rotations: Annotated[str, Form()] = "",
+    pagesize: PageSize = "A4",
+    orientation: Orientation = "portrait",
+    margin: Margin = 0,
+) -> FileResponse:
+    layout = images_pdf.parse_layout(pagesize, orientation, margin)
+    return await _run(files, merge.merge, parse_rotations(rotations), layout, weight=_HEAVY)
+
+
+@router.post("/images-to-pdf")
+async def images_to_pdf(
+    files: Uploads,
+    rotations: Annotated[str, Form()] = "",
+    pagesize: PageSize = "A4",
+    orientation: Orientation = "portrait",
+    margin: Margin = 0,
+    merge_after: Annotated[bool, Form()] = True,
+) -> FileResponse:
+    # Before the page check, so a PDF sent here is told it is not an image.
+    for upload in files:
+        name = workspace.safe_name(upload.filename)
+        if Path(name).suffix.lower() not in settings.IMAGE_SUFFIXES:
+            raise AppError(errors.INVALID_INPUT, f"{name} is not an image.")
+    layout = images_pdf.parse_layout(pagesize, orientation, margin)
+    return await _run(
+        files,
+        images_pdf.images_to_pdf,
+        parse_rotations(rotations),
+        layout,
+        merge_after,
+        weight=_HEAVY,
+    )
 
 
 @router.post("/split")
