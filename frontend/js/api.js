@@ -33,6 +33,12 @@ export async function runTool(endpoint, body) {
 function fileName(response) {
   const header = response.headers.get("content-disposition") ?? "";
   const encoded = header.match(/filename\*=utf-8''([^;]+)/i);
-  if (encoded) return decodeURIComponent(encoded[1]);
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded[1]);
+    } catch {
+      // A malformed escape falls back to the plain name.
+    }
+  }
   return header.match(/filename="?([^";]+)/i)?.[1] ?? "result";
 }

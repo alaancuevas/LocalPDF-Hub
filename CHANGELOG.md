@@ -3,6 +3,15 @@
 All notable changes to LocalPDF Hub. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- Merge / convert all is now called Convert all.
+
+### Fixed
+- A download whose name carries a malformed escape keeps its plain name
+  instead of failing.
+
 ## [4.1.0] - 2026-10-19
 
 ### Added
