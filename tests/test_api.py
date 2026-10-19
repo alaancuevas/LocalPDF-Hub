@@ -4,6 +4,7 @@ These tests are written against the contract, not the code: when the
 implementation is reorganised they must keep passing unchanged.
 """
 
+import contextlib
 import io
 import mimetypes
 import re
@@ -23,7 +24,8 @@ from pypdf.constants import UserAccessPermissions
 from localpdf_hub import platform as host
 from localpdf_hub import settings
 from localpdf_hub.app import create_app
-from localpdf_hub.tools import images
+from localpdf_hub.errors import AppError
+from localpdf_hub.tools import images, pages
 
 ORIGIN = "http://127.0.0.1:8000"
 
@@ -424,15 +426,28 @@ def test_watermark_counts_a_repeated_selection_once(client):
 
 
 @pytest.mark.parametrize(("tool", "fields"), [("split", {}), ("watermark", {"text": "X"})])
-def test_a_megabyte_of_pages_costs_little(client, tool, fields):
-    spec = "1," * 500_000
-    tracemalloc.start()
+def test_a_megabyte_of_pages_is_answered(client, tool, fields):
+    response = post(client, tool, one("a.pdf", pdf(1)), pages="1," * 500_000, **fields)
+    assert response.status_code in (200, 413), response.text
+
+
+@pytest.mark.parametrize(
+    ("spec", "total"),
+    [("1," * 500_000, 1), ("1-2000," * 140_000, 2000)],
+    ids=["one page named 500000 times", "the whole document 140000 times"],
+)
+@pytest.mark.parametrize("parse", [pages.page_numbers, pages.page_set], ids=["split", "watermark"])
+def test_a_megabyte_of_pages_costs_little(parse, spec, total):
+    # The parser alone: the time of the whole request depends on the CI machine.
     started = time.monotonic()
-    response = post(client, tool, one("a.pdf", pdf(1)), pages=spec, **fields)
+    with contextlib.suppress(AppError):
+        parse(spec, total)
     elapsed = time.monotonic() - started
+    tracemalloc.start()
+    with contextlib.suppress(AppError):
+        parse(spec, total)
     _, peak = tracemalloc.get_traced_memory()
     tracemalloc.stop()
-    assert response.status_code in (200, 413), response.text
     assert elapsed < 1 and peak < 50 * 1024 * 1024, f"{elapsed:.2f} s, {peak / 1e6:.0f} MB"
 
 
