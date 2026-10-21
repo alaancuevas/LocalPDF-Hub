@@ -5,6 +5,8 @@ The UI translates `code`; `message` is English and meant for logs.
 
 INVALID_INPUT = "ERR_INVALID_INPUT"
 INVALID_PDF = "ERR_INVALID_PDF"
+# A limit of pypdf, not damage: the same file may open in other readers.
+UNSUPPORTED_PDF = "ERR_UNSUPPORTED_PDF"
 WRONG_PASSWORD = "ERR_WRONG_PASSWORD"
 NOT_ENCRYPTED = "ERR_NOT_ENCRYPTED"
 ENCRYPTED = "ERR_ENCRYPTED"
@@ -23,6 +25,7 @@ INTERNAL = "ERR_INTERNAL"
 _STATUS = {
     INVALID_INPUT: 400,
     INVALID_PDF: 400,
+    UNSUPPORTED_PDF: 400,
     WRONG_PASSWORD: 400,
     NOT_ENCRYPTED: 400,
     ENCRYPTED: 400,

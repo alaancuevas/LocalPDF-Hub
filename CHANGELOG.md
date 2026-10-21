@@ -3,6 +3,16 @@
 All notable changes to LocalPDF Hub. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- A PDF past the limits of the PDF library (a number longer than 64
+  characters, objects nested too deep, a stream over 75 MB) gets its own
+  message, "LocalPDF cannot process this PDF", instead of "Something went
+  wrong on our side". Error messages no longer echo what the library said
+  about the file.
+- A long option in a dropdown stays inside the options panel.
+
 ## [4.2.0] - 2026-10-20
 
 ### Added

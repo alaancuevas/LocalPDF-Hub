@@ -12,7 +12,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pypdf.errors import FileNotDecryptedError, PdfReadError
+from pypdf.errors import FileNotDecryptedError, PdfReadError, PyPdfError
 
 from localpdf_hub import __version__, api, errors, settings, workspace
 from localpdf_hub.errors import AppError
@@ -58,6 +58,44 @@ def _error(code: str, message: str, status: int) -> JSONResponse:
     return JSONResponse({"code": code, "message": message}, status_code=status)
 
 
+def _mostly_pypdf(error: BaseException) -> bool:
+    """Whether most frames of the traceback run pypdf code.
+
+    By module name, not file path: the PyInstaller build has relative paths that never
+    match the package folder. Walks tb_next only: no source lines read in the event loop.
+    """
+    total = in_pypdf = 0
+    frame = error.__traceback__
+    while frame is not None:
+        total += 1
+        module = frame.tb_frame.f_globals.get("__name__", "")
+        in_pypdf += module == "pypdf" or module.startswith("pypdf.")
+        frame = frame.tb_next
+    return 2 * in_pypdf > total
+
+
+def pypdf_recursion(error: BaseException) -> bool:
+    """A recursion that ran out of stack inside pypdf, not in our own code.
+
+    pypdf sometimes wraps it in a PdfReadError; then the frames counted are the ones of the
+    error that reached us (its cause holds only the last few).
+    """
+    if isinstance(error, RecursionError):
+        return _mostly_pypdf(error)
+    cause = error.__cause__ or error.__context__
+    return (
+        isinstance(error, PdfReadError)
+        and isinstance(cause, RecursionError)
+        and _mostly_pypdf(error)
+    )
+
+
+def _unsupported(request: Request, error: BaseException) -> JSONResponse:
+    # One line, no traceback: a deep nesting would log about a thousand frames.
+    logger.warning("Unsupported PDF (%s) on %s", type(error).__name__, request.url.path)
+    return _error(errors.UNSUPPORTED_PDF, "The PDF uses structures this tool cannot process.", 400)
+
+
 def create_app() -> FastAPI:
     # On Windows, mimetypes reads the registry, where some installs map .js to
     # text/plain; browsers then refuse to run the UI's ES modules.
@@ -83,9 +121,26 @@ def create_app() -> FastAPI:
     async def encrypted_pdf(_: Request, error: FileNotDecryptedError) -> JSONResponse:
         return _error(errors.ENCRYPTED, "The PDF needs a password to open.", 400)
 
+    # Fixed messages: what pypdf says about the file stays out of the answer.
     @app.exception_handler(PdfReadError)
-    async def unreadable_pdf(_: Request, error: PdfReadError) -> JSONResponse:
-        return _error(errors.INVALID_PDF, f"The PDF could not be read: {error}", 400)
+    async def unreadable_pdf(request: Request, error: PdfReadError) -> JSONResponse:
+        if pypdf_recursion(error):
+            return _unsupported(request, error)
+        return _error(errors.INVALID_PDF, "The PDF could not be read.", 400)
+
+    # The rest of pypdf's errors (LimitReachedError, ParseError…) are limits of pypdf.
+    # DependencyError and DeprecationError do not derive from PyPdfError: they stay 500.
+    @app.exception_handler(PyPdfError)
+    async def unsupported_pdf(request: Request, error: PyPdfError) -> JSONResponse:
+        return _unsupported(request, error)
+
+    @app.exception_handler(RecursionError)
+    async def too_deep(request: Request, error: RecursionError) -> JSONResponse:
+        if pypdf_recursion(error):
+            return _unsupported(request, error)
+        # This handler takes the error away from the catch-all below: log it the same way.
+        logger.exception("Unhandled error", exc_info=error)
+        return _error(errors.INTERNAL, "Something went wrong on our side.", 500)
 
     @app.exception_handler(RequestValidationError)
     async def invalid_form(_: Request, error: RequestValidationError) -> JSONResponse:

@@ -178,6 +178,7 @@ export default {
 
   "error.ERR_INVALID_INPUT": "Check the options: one of the values is not valid.",
   "error.ERR_INVALID_PDF": "The file is not a valid PDF or it is damaged.",
+  "error.ERR_UNSUPPORTED_PDF": "LocalPDF cannot process this PDF: it is too large or too complex for this tool.",
   "error.ERR_WRONG_PASSWORD": "The password is not correct.",
   "error.ERR_NOT_ENCRYPTED": "That PDF has no password.",
   "error.ERR_ENCRYPTED": "This PDF needs a password to open. Unlock it first.",

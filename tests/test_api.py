@@ -6,12 +6,15 @@ implementation is reorganised they must keep passing unchanged.
 
 import contextlib
 import io
+import logging
 import mimetypes
 import re
 import threading
 import time
 import tracemalloc
+import types
 import zipfile
+import zlib
 from concurrent.futures import ThreadPoolExecutor
 
 import pypdfium2 as pdfium
@@ -20,6 +23,8 @@ from fastapi.testclient import TestClient
 from PIL import Image
 from pypdf import PasswordType, PdfReader, PdfWriter
 from pypdf.constants import UserAccessPermissions
+from pypdf.errors import DependencyError, DeprecationError, PdfReadError
+from pypdf.generic import FloatObject
 
 from localpdf_hub import platform as host
 from localpdf_hub import settings
@@ -705,3 +710,225 @@ def test_scripts_are_served_as_javascript_whatever_the_registry_says(monkeypatch
     mimetypes.add_type("text/plain", ".js")
     response = TestClient(create_app(), base_url=ORIGIN).get("/js/main.js")
     assert response.headers["content-type"].startswith("text/javascript")
+
+
+# --- PDFs pypdf cannot process ---
+
+
+def raw_pdf(objects: dict[int, bytes], info: bytes = b"") -> bytes:
+    """A PDF written byte by byte, so the odd part reaches the app as it is."""
+    out = bytearray(b"%PDF-1.7\n")
+    offsets = {}
+    for number in sorted(objects):
+        offsets[number] = len(out)
+        out += b"%d 0 obj\n" % number + objects[number] + b"\nendobj\n"
+    size = max(objects) + 1
+    xref = len(out)
+    out += b"xref\n0 %d\n0000000000 65535 f \n" % size
+    for number in range(1, size):
+        out += (
+            b"%010d 00000 n \n" % offsets[number] if number in offsets else b"0000000000 65535 f \n"
+        )
+    trailer = b"/Size %d /Root 1 0 R" % size + (b" /Info " + info if info else b"")
+    out += b"trailer\n<< " + trailer + b" >>\nstartxref\n%d\n%%%%EOF\n" % xref
+    return bytes(out)
+
+
+def raw_stream(data: bytes, extra: bytes = b"") -> bytes:
+    return b"<< /Length %d%s >>\nstream\n" % (len(data), extra) + data + b"\nendstream"
+
+
+def raw_page(page_extra: bytes = b"", content: bytes = b"0 0 m 10 10 l S", **objects) -> bytes:
+    info = objects.pop("info", b"")
+    return raw_pdf(
+        {
+            1: b"<< /Type /Catalog /Pages 2 0 R >>",
+            2: b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            3: b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Contents 4 0 R"
+            b" /Resources << /XObject << /F 10 0 R >> >>" + page_extra + b" >>",
+            4: raw_stream(content),
+            **{int(key[1:]): value for key, value in objects.items()},
+        },
+        info,
+    )
+
+
+def nested_forms(depth: int) -> bytes:
+    """A page that draws a form that draws a form… depth levels deep."""
+    forms = {}
+    for level in range(depth):
+        number = 10 + level
+        last = level == depth - 1
+        resources = b"" if last else b" /Resources << /XObject << /F %d 0 R >> >>" % (number + 1)
+        forms[f"o{number}"] = raw_stream(
+            b"0 0 m 5 5 l S" if last else b"/F Do",
+            b" /Type /XObject /Subtype /Form /BBox [0 0 200 200]" + resources,
+        )
+    return raw_page(content=b"/F Do", **forms)
+
+
+def long_number() -> bytes:
+    # pypdf reads at most 64 characters of a number.
+    return raw_page(page_extra=b" /Junk 1" + b"0" * 69, o10=raw_stream(b"", b" /Subtype /Form"))
+
+
+def flate_content(megabytes: int) -> bytes:
+    """A page whose content stream inflates to more than pypdf's 75 MB limit."""
+    body = zlib.compress(b" " * (megabytes * 1_000_000) + b"0 0 m 10 10 l S", 9)
+    return raw_pdf(
+        {
+            1: b"<< /Type /Catalog /Pages 2 0 R >>",
+            2: b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            3: b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Contents 4 0 R >>",
+            4: raw_stream(body, b" /Filter /FlateDecode"),
+        }
+    )
+
+
+@pytest.fixture
+def production_logging():
+    # The desktop app logs at INFO (desktop.py); pypdf's warnings then run inside the recursion
+    # and a deep nesting fails where it would pass with logging off.
+    root = logging.getLogger()
+    handler = logging.NullHandler()
+    level = root.level
+    root.addHandler(handler)
+    root.setLevel(logging.INFO)
+    yield
+    root.removeHandler(handler)
+    root.setLevel(level)
+
+
+# Tools that read the PDF with pypdf, with the field and options each needs.
+PYPDF_TOOLS = [
+    ("merge", "files", {}),
+    ("split", "file", {"pages": "1"}),
+    ("rotate", "file", {"rotations": "90"}),
+    ("compress", "file", {}),
+    ("compress", "file", {"level": "lossless"}),
+    ("protect", "file", {"password": "s3cret"}),
+    ("watermark", "file", {"text": "X"}),
+]
+ALL_TOOLS = [
+    *PYPDF_TOOLS,
+    ("extract-images", "file", {}),
+    ("to-images", "file", {}),
+    ("to-word", "file", {}),
+]
+UNSUPPORTED_MESSAGE = "The PDF uses structures this tool cannot process."
+
+
+def send(client, tool, field, fields, data: bytes):
+    files = [(field, ("a.pdf", data, "application/pdf"))] * (2 if field == "files" else 1)
+    return post(client, tool, files, **fields)
+
+
+def assert_unsupported(response) -> None:
+    assert_error(response, 400, "ERR_UNSUPPORTED_PDF")
+    # A fixed message: what pypdf said stays in the log, not in the answer.
+    assert response.json()["message"] == UNSUPPORTED_MESSAGE
+
+
+@pytest.mark.parametrize(("tool", "field", "fields"), ALL_TOOLS)
+def test_unsupported_number_longer_than_pypdf_reads(client, tool, field, fields):
+    assert_unsupported(send(client, tool, field, fields, long_number()))
+
+
+@pytest.mark.usefixtures("production_logging")
+@pytest.mark.parametrize("depth", [150, 200, 1000])
+@pytest.mark.parametrize(("tool", "field", "fields"), PYPDF_TOOLS)
+def test_unsupported_forms_nested_too_deep(client, tool, field, fields, depth):
+    assert_unsupported(send(client, tool, field, fields, nested_forms(depth)))
+
+
+@pytest.mark.parametrize(
+    ("tool", "fields"),
+    [
+        ("compress", {}),
+        ("compress", {"level": "lossless"}),
+        ("watermark", {"text": "X"}),
+        ("extract-images", {}),
+    ],
+)
+def test_unsupported_stream_past_pypdf_limit(client, tool, fields):
+    assert_unsupported(send(client, tool, "file", fields, flate_content(80)))
+
+
+def test_unsupported_stream_past_pypdf_limit_is_still_copied_whole(client):
+    # Rotating copies the stream without inflating it: the limit never applies.
+    response = send(client, "rotate", "file", {"rotations": "90"}, flate_content(80))
+    assert response.status_code == 200
+
+
+def _descend(level: int):
+    # A pypdf call at every level: the stack runs out in pypdf or here, the recursion is ours.
+    FloatObject("1.5")
+    return _descend(level + 1)
+
+
+def own_recursion(*_args):
+    return _descend(0)
+
+
+def pypdf_like_recursion(*_args):
+    # Frames of pypdf as the PyInstaller build has them: a relative path, never the package folder.
+    code = _descend.__code__.replace(co_filename="pypdf/_fake.py")
+    namespace = {"__name__": "pypdf._fake", "FloatObject": FloatObject}
+    namespace["_descend"] = types.FunctionType(code, namespace, "_descend")
+    return namespace["_descend"](0)
+
+
+def test_unsupported_own_recursion_is_still_an_internal_error(client, monkeypatch, caplog):
+    monkeypatch.setattr(pages, "rotate", own_recursion)
+    with caplog.at_level(logging.ERROR):
+        response = send(client, "rotate", "file", {"rotations": "90"}, pdf(1))
+    assert_error(response, 500, "ERR_INTERNAL")
+    assert any(record.exc_info for record in caplog.records if record.levelno == logging.ERROR)
+
+
+def test_unsupported_recursion_is_told_by_module_not_path(client, monkeypatch):
+    monkeypatch.setattr(pages, "rotate", pypdf_like_recursion)
+    assert_unsupported(send(client, "rotate", "file", {"rotations": "90"}, pdf(1)))
+
+
+def _descend_to_read_error(level: int):
+    try:
+        return _descend_to_read_error(level + 1)
+    except RecursionError as error:
+        raise PdfReadError("too deep") from error
+
+
+def test_unsupported_own_recursion_ending_in_pdf_read_error(client, monkeypatch):
+    monkeypatch.setattr(pages, "rotate", lambda *_args: _descend_to_read_error(0))
+    response = send(client, "rotate", "file", {"rotations": "90"}, pdf(1))
+    assert response.json()["code"] in {"ERR_INVALID_PDF", "ERR_INTERNAL"}
+
+
+@pytest.mark.parametrize("error", [DependencyError, DeprecationError])
+def test_unsupported_leaves_pypdf_setup_errors_internal(monkeypatch, error):
+    def fail(*_args):
+        raise error("setup")
+
+    # The catch-all 500 handler runs in Starlette's outer middleware, which re-raises in a
+    # TestClient unless told not to.
+    lenient = TestClient(create_app(), base_url=ORIGIN, raise_server_exceptions=False)
+    token = re.search(r'<meta name="localpdf-token" content="([^"]+)"', lenient.get("/").text)
+    lenient.headers.update({"X-LocalPDF-Token": token.group(1), "Origin": ORIGIN})
+    monkeypatch.setattr(pages, "rotate", fail)
+    response = send(lenient, "rotate", "file", {"rotations": "90"}, pdf(1))
+    assert_error(response, 500, "ERR_INTERNAL")
+
+
+def test_unsupported_recursion_is_classified_quickly():
+    from localpdf_hub.app import pypdf_recursion
+
+    try:
+        pypdf_like_recursion()
+    except RecursionError as error:
+        caught = error
+    timings = []
+    for _ in range(10):
+        start = time.perf_counter()
+        assert pypdf_recursion(caught)
+        timings.append(time.perf_counter() - start)
+    assert min(timings) < 0.001

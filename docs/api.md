@@ -27,6 +27,9 @@ resulting file, or a JSON error.
   everywhere. `protect` keeps its restrictions under a new owner password
   nobody is given; the other tools that rewrite the PDF return it without
   them.
+- A PDF past the limits of the PDF library (a number longer than 64
+  characters, objects nested too deep, a stream over 75 MB) is refused with
+  `ERR_UNSUPPORTED_PDF`: the file may be fine and open in other readers.
 
 ## Endpoints
 
@@ -85,7 +88,7 @@ English for logs:
 
 | Status | Codes |
 |---|---|
-| 400 | `ERR_INVALID_INPUT`, `ERR_INVALID_PDF`, `ERR_ENCRYPTED`, `ERR_WRONG_PASSWORD`, `ERR_NOT_ENCRYPTED`, `ERR_NO_PAGES`, `ERR_NO_IMAGES`, `ERR_MARK_TOO_LARGE` |
+| 400 | `ERR_INVALID_INPUT`, `ERR_INVALID_PDF`, `ERR_UNSUPPORTED_PDF`, `ERR_ENCRYPTED`, `ERR_WRONG_PASSWORD`, `ERR_NOT_ENCRYPTED`, `ERR_NO_PAGES`, `ERR_NO_IMAGES`, `ERR_MARK_TOO_LARGE` |
 | 403 | missing or wrong token, foreign origin (plain text, no JSON body) |
 | 413 | `ERR_TOO_LARGE`, `ERR_TOO_MANY_PAGES`, `ERR_TOO_MANY_IMAGES`, `ERR_IMAGE_TOO_LARGE`, `ERR_RESULT_TOO_LARGE` |
 | 503 | `ERR_TIMEOUT`, `ERR_CONVERTER_MISSING` (Word to PDF needs Word or LibreOffice) |
