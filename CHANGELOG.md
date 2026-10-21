@@ -3,7 +3,7 @@
 All notable changes to LocalPDF Hub. Versions follow
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [4.2.0] - 2026-10-20
 
 ### Added
 - Watermark options: position in a 3 × 3 grid or a mosaic over the whole
