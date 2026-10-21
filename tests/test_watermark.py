@@ -24,6 +24,7 @@ from pypdf.generic import (
 )
 
 from localpdf_hub.errors import AppError
+from localpdf_hub.tools import pdf_files
 from localpdf_hub.tools import watermark as wm
 
 ORIGINAL = "Original page text"
@@ -197,7 +198,8 @@ def test_the_job_writer_is_released(tmp_path, monkeypatch):
             super().__init__(*args, **kwargs)
             refs.append(weakref.ref(self))
 
-    monkeypatch.setattr(wm, "PdfWriter", Tracked)
+    # The job writer is built by pdf_files.clone.
+    monkeypatch.setattr(pdf_files, "PdfWriter", Tracked)
     mark(tmp_path, pages=2)
     gc.collect()
     assert refs and all(ref() is None for ref in refs)

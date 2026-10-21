@@ -11,6 +11,9 @@ All notable changes to LocalPDF Hub. Versions follow
   message, "LocalPDF cannot process this PDF", instead of "Something went
   wrong on our side". Error messages no longer echo what the library said
   about the file.
+- Rotate, Compress, Watermark, Protect and Unlock keep the document title and
+  other metadata written as separate objects; before, they could come out
+  empty or pointing to another part of the file, and Compress failed on them.
 - A long option in a dropdown stays inside the options panel.
 
 ## [4.2.0] - 2026-10-20

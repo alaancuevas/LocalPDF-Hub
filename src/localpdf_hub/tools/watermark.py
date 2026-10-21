@@ -33,7 +33,7 @@ from localpdf_hub import errors
 from localpdf_hub.errors import AppError
 from localpdf_hub.limits import check_deadline
 from localpdf_hub.tools import pages
-from localpdf_hub.tools.pdf_files import read_pdf, write_pdf
+from localpdf_hub.tools.pdf_files import clone, read_pdf, write_pdf
 
 _MAX_CHARS = 100
 _MIN_SIZE, _MAX_SIZE = 8.0, 200.0
@@ -128,7 +128,7 @@ def watermark(path: Path, text: str, opacity: float, layout: Layout, out_dir: Pa
     _check_direction(text)
     font = _subset_font(text)
 
-    writer = PdfWriter(clone_from=read_pdf(path))
+    writer = clone(read_pdf(path))
     chosen = pages.page_set(layout.pages, len(writer.pages)) if layout.pages else None
     resources = DictionaryObject(
         {

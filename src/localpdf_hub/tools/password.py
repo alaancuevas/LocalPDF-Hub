@@ -3,12 +3,12 @@
 import secrets
 from pathlib import Path
 
-from pypdf import PasswordType, PdfWriter
+from pypdf import PasswordType
 from pypdf.constants import UserAccessPermissions as Permission
 
 from localpdf_hub import errors, limits
 from localpdf_hub.errors import AppError
-from localpdf_hub.tools.pdf_files import read_pdf, write_pdf
+from localpdf_hub.tools.pdf_files import clone, read_pdf, write_pdf
 
 # Bits 3-6 and 9-12: what an owner password can take away.
 _RESTRICTABLE = (
@@ -34,7 +34,7 @@ def protect(path: Path, password: str, out_dir: Path) -> Path:
             raise AppError(errors.ENCRYPTED, f"{path.name} needs its password; unlock it first.")
         permissions = reader.user_access_permissions
     # clone_from keeps bookmarks, links and metadata that copying pages drops.
-    writer = PdfWriter(clone_from=reader)
+    writer = clone(reader)
     # pypdf defaults to RC4, which is broken; AES-256 is revision 6 of the spec.
     if permissions is not None and (permissions & _RESTRICTABLE) != _RESTRICTABLE:
         # The restrictions stay binding for everybody, as before: nobody gets an owner password.
@@ -57,5 +57,5 @@ def unlock(path: Path, password: str, out_dir: Path) -> Path:
         raise AppError(errors.WRONG_PASSWORD, "The password is not correct.")
     # The general check could not count the pages before the password was known.
     limits.check_page_count(len(reader.pages))
-    writer = PdfWriter(clone_from=reader)
+    writer = clone(reader)
     return write_pdf(writer, out_dir / f"{path.stem}_unlocked.pdf")

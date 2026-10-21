@@ -33,7 +33,7 @@ from pypdf.generic import (
 from localpdf_hub import errors, settings
 from localpdf_hub.errors import AppError
 from localpdf_hub.limits import check_deadline
-from localpdf_hub.tools.pdf_files import read_pdf, write_pdf
+from localpdf_hub.tools.pdf_files import clone, read_pdf, write_pdf
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,7 @@ def parse_level(text: str) -> Level | None:
 def compress(path: Path, level: Level | None, out_dir: Path) -> Path:
     out = out_dir / f"{path.stem}_compressed.pdf"
     if level is None:
-        _finish(PdfWriter(clone_from=read_pdf(path)), out, copies=False)
+        _finish(clone(read_pdf(path)), out, copies=False)
     else:
         failure = ""
         try:
@@ -116,7 +116,7 @@ def compress(path: Path, level: Level | None, out_dir: Path) -> Path:
             # before the input is cloned again.
             gc.collect()
             logger.info("compress %s: lossless, %s while rewriting", level.name, failure)
-            _finish(PdfWriter(clone_from=read_pdf(path)), out, copies=False)
+            _finish(clone(read_pdf(path)), out, copies=False)
     if out.stat().st_size >= path.stat().st_size:
         shutil.copyfile(path, out)
     return out
@@ -340,7 +340,7 @@ def _recompress(obj: Any, size: tuple[int, int], quality: int) -> DecodedStreamO
 def _lossy(path: Path, level: Level, out: Path) -> tuple[int, str, int]:
     """Writes the recompressed PDF to out: (images replaced, reason, decoded pixels charged)."""
     started = time.monotonic()
-    writer = PdfWriter(clone_from=read_pdf(path))
+    writer = clone(read_pdf(path))
     replaced, reason, spent = 0, "", 0
     copies: dict[Key, DictionaryObject] = {}
     walk = _Walk(check_deadline)

@@ -8,7 +8,7 @@ from pypdf import PdfWriter
 from localpdf_hub import errors, settings
 from localpdf_hub.errors import AppError
 from localpdf_hub.limits import check_deadline
-from localpdf_hub.tools.pdf_files import read_pdf, write_pdf
+from localpdf_hub.tools.pdf_files import clone, read_pdf, write_pdf
 
 
 def page_numbers(spec: str, total: int) -> list[int]:
@@ -66,7 +66,7 @@ def split(path: Path, spec: str, out_dir: Path) -> Path:
 
 def rotate(path: Path, rotations: list[int], out_dir: Path) -> Path:
     """Each angle is added to the page's current rotation, like the UI preview shows."""
-    writer = PdfWriter(clone_from=read_pdf(path))
+    writer = clone(read_pdf(path))
     for page, angle in zip(writer.pages, rotations, strict=False):
         check_deadline()
         if angle:

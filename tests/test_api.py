@@ -24,7 +24,7 @@ from PIL import Image
 from pypdf import PasswordType, PdfReader, PdfWriter
 from pypdf.constants import UserAccessPermissions
 from pypdf.errors import DependencyError, DeprecationError, PdfReadError
-from pypdf.generic import FloatObject
+from pypdf.generic import FloatObject, NameObject, TextStringObject
 
 from localpdf_hub import platform as host
 from localpdf_hub import settings
@@ -932,3 +932,102 @@ def test_unsupported_recursion_is_classified_quickly():
         assert pypdf_recursion(caught)
         timings.append(time.perf_counter() - start)
     assert min(timings) < 0.001
+
+
+# --- /Info of the tools that clone the document ---
+
+TITLE = "Informe anual"
+PRODUCER = "Productor de prueba"
+
+
+def titled(**encrypt) -> bytes:
+    """A PDF whose /Title is an indirect object, as some producers write it.
+
+    The content stream is 3 MB of uncompressed drawing, so Compress really shrinks it and
+    returns its own output, not the original.
+    """
+    source = raw_page(
+        content=b"0 0 m 10 10 l S\n" * 200_000,
+        o5=b"<< /Title 6 0 R /Producer (%s) >>" % PRODUCER.encode(),
+        o6=b"(%s)" % TITLE.encode(),
+        o10=raw_stream(b"", b" /Subtype /Form /BBox [0 0 1 1]"),
+        info=b"5 0 R",
+    )
+    if not encrypt:
+        return source
+    writer = PdfWriter(clone_from=PdfReader(io.BytesIO(source)))
+    # pypdf's clone leaves /Title pointing at another object (the bug under test): point it again.
+    writer._info[NameObject("/Title")] = writer._add_object(TextStringObject(TITLE))
+    writer.encrypt(**encrypt)
+    buf = io.BytesIO()
+    writer.write(buf)
+    return buf.getvalue()
+
+
+def info_of(response, password: str = "") -> dict:
+    assert response.status_code == 200, response.text
+    reader = PdfReader(io.BytesIO(response.content))
+    if reader.is_encrypted:
+        reader.decrypt(password)
+    raw = reader.trailer.get("/Info")
+    info = raw.get_object() if raw is not None else {}
+    return {key: value.get_object() for key, value in info.items()}
+
+
+@pytest.mark.parametrize(
+    ("tool", "fields"),
+    [
+        ("rotate", {"rotations": "90"}),
+        ("compress", {}),
+        ("compress", {"level": "lossless"}),
+        ("watermark", {"text": "X"}),
+        ("protect", {"password": "s3cret"}),
+    ],
+)
+def test_info_keeps_an_indirect_title(client, tool, fields):
+    source = titled()
+    response = send(client, tool, "file", fields, source)
+    if tool == "compress":
+        assert len(response.content) < len(source) / 10  # its own output, not the original
+    info = info_of(response, "s3cret")
+    assert info["/Title"] == TITLE
+    assert info["/Producer"] == PRODUCER
+
+
+@pytest.mark.parametrize("algorithm", ["RC4-128", "AES-128", "AES-256"])
+def test_info_unlock_keeps_an_indirect_title(client, algorithm):
+    source = titled(user_password="s3cret", owner_password="owner", algorithm=algorithm)
+    info = info_of(send(client, "unlock", "file", {"password": "s3cret"}, source))
+    assert info["/Title"] == TITLE
+
+
+def test_info_protect_an_owner_only_pdf_keeps_an_indirect_title(client):
+    source = titled(user_password="", owner_password="owner", algorithm="AES-256")
+    info = info_of(send(client, "protect", "file", {"password": "nueva"}, source), "nueva")
+    assert info["/Title"] == TITLE
+
+
+BROKEN_INFO = {
+    "array": (b"<< /Foo [999 0 R] /Producer (P) >>", b"5 0 R"),
+    "dictionary": (b"<< /Foo << /Bar 999 0 R >> /Producer (P) >>", b"5 0 R"),
+    "out of range": (b"<< /Title 999 0 R /Producer (P) >>", b"5 0 R"),
+    "direct out of range": (None, b"<< /Title 999 0 R /Producer (P) >>"),
+}
+
+
+@pytest.mark.parametrize("case", BROKEN_INFO)
+@pytest.mark.parametrize(
+    ("tool", "fields"),
+    [("compress", {}), ("compress", {"level": "lossless"}), ("watermark", {"text": "X"})],
+)
+def test_info_with_broken_references_is_repaired(client, tool, fields, case):
+    info_object, info = BROKEN_INFO[case]
+    objects = {
+        "o10": raw_stream(b"0 0 m 10 10 l S\n" * 200_000, b" /Subtype /Form /BBox [0 0 1 1]")
+    }
+    if info_object:
+        objects["o5"] = info_object
+    result = info_of(send(client, tool, "file", fields, raw_page(info=info, **objects)))
+    assert result["/Producer"] == "P"
+    assert "/Foo" not in result
+    assert result.get("/Title") is None
