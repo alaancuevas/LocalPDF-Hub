@@ -18,7 +18,7 @@ Las capturas muestran la interfaz en inglés; en Ajustes se cambia a español.
 | Unir PDF | Proteger con contraseña (AES-256), escrita dos veces | Convertir todo: PDF e imágenes en un solo PDF |
 | Dividir por páginas o rangos | Desbloquear un PDF del que tenés la contraseña | Imagen a PDF (JPG, PNG, HEIC, TIFF) |
 | Rotar páginas | Marca de agua: posición en grilla o mosaico, rotación, tamaño, color y páginas | Extraer imágenes |
-| Comprimir | | PDF a imágenes (PNG o JPG, de 72 a 300 ppp) |
+| Comprimir: recomendada, extrema o sin pérdida | | PDF a imágenes (PNG o JPG, de 72 a 300 ppp) |
 | | | PDF a Word y Word a PDF |
 
 ## Tus archivos no salen de tu computadora

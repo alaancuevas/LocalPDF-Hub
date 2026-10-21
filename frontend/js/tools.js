@@ -74,7 +74,25 @@ export const TOOLS = {
     fields: [{ name: "pages", label: "optionPages", hint: "optionPagesHint", type: "text", required: true }],
   },
   rotate: { icon: "arrow-clockwise", endpoint: "rotate", accepts: PDF, pagePicker: "rotate", fields: [] },
-  compress: { icon: "arrows-in", endpoint: "compress", accepts: PDF, fields: [] },
+  compress: {
+    icon: "arrows-in",
+    endpoint: "compress",
+    accepts: PDF,
+    // Recommended first; lossless keeps the images as they are.
+    fields: [
+      {
+        name: "level",
+        label: "optionLevel",
+        type: "select",
+        value: "recommended",
+        options: [
+          ["recommended", "levelRecommended"],
+          ["extreme", "levelExtreme"],
+          ["lossless", "levelLossless"],
+        ],
+      },
+    ],
+  },
   protect: {
     icon: "lock-simple",
     endpoint: "protect",

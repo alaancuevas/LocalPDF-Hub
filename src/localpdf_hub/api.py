@@ -12,6 +12,7 @@ from starlette.background import BackgroundTask
 from localpdf_hub import errors, limits, settings, workspace
 from localpdf_hub import platform as host
 from localpdf_hub.errors import AppError
+from localpdf_hub.tools import compress as compress_tool
 from localpdf_hub.tools import images, images_pdf, merge, pages, password, watermark, word
 from localpdf_hub.tools.pdf_files import parse_rotations
 
@@ -136,8 +137,11 @@ async def rotate(file: Upload, rotations: Annotated[str, Form()]) -> FileRespons
 
 
 @router.post("/compress")
-async def compress(file: Upload) -> FileResponse:
-    return await _run([file], pages.compress)
+async def compress(file: Upload, level: Annotated[str, Form()] = "") -> FileResponse:
+    parsed = compress_tool.parse_level(level)
+    # Recompressing images peaks at 1.8 GB (settings.COMPRESS_*); lossless stays light as before.
+    weight = _LIGHT if parsed is None else _HEAVY
+    return await _run([file], compress_tool.compress, parsed, weight=weight)
 
 
 @router.post("/protect")

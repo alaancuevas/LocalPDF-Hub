@@ -10,10 +10,15 @@ All notable changes to LocalPDF Hub. Versions follow
   page, rotation (0, 45, 90, 180, 270), size, colour, and which pages.
 - PDF to images: PNG or JPG, at 72, 150 or 300 dpi.
 - Protect asks for the password twice.
+- Compress has levels: recommended (scanned pages brought down to 150 dpi,
+  about a quarter of the size), extreme (100 dpi) and lossless (what Compress
+  did until now).
 
 ### Changed
 - Merge / convert all is now called Convert all.
 - A watermark is tilted 45° by default instead of 35°.
+- Compress uses the recommended level by default, and when the result would
+  not be smaller it hands back the original file.
 
 ### Fixed
 - A download whose name carries a malformed escape keeps its plain name

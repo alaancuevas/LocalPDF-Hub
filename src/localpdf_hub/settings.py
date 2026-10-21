@@ -53,6 +53,15 @@ MAX_IMAGES = 200
 # With this cap, 500 MB of 50 MP TIFFs (Apple M4) peaked at 1.95 GB for a
 # 1.3 GB result (q90, 47 s) and at 2.31 GB when stopped (q25, 51 s).
 MAX_RESULT_BYTES = 1536 * 1024 * 1024
+# Compress, recommended and extreme (Apple M4): the costliest honest input measured, 1853
+# letter scans at 300 dpi, decodes 3.9 GP in 13 s; 1820 near-50 MP JPEGs that draft cannot
+# shrink stop at the 20 GP budget in 116 s. One 49 MP image takes at most 2.1 s and 1.3 GB
+# (11 scans, 4:4:4, a 46 in page); a JPEG with more scans stays as it is. MAX_WORK bounds the
+# dictionary walk.
+COMPRESS_MAX_WORK = 1_000_000
+COMPRESS_PIXEL_BUDGET = 20_000_000_000
+COMPRESS_SOFT_SECONDS = JOB_TIMEOUT_S / 2
+COMPRESS_MAX_SCANS = 11
 IMAGE_SUFFIXES = frozenset(
     {".png", ".jpg", ".jpeg", ".jfif", ".jif", ".heic", ".heif", ".tif", ".tiff"}
 )

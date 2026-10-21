@@ -16,7 +16,7 @@ and convert, without uploading your files anywhere.
 | Merge PDFs | Protect with a password (AES-256), typed twice | Convert all: PDFs and images into one PDF |
 | Split by pages or ranges | Unlock a PDF you have the password for | Image to PDF (JPG, PNG, HEIC, TIFF) |
 | Rotate pages | Watermark: grid position or mosaic, rotation, size, colour and pages | Extract images |
-| Compress | | PDF to images (PNG or JPG, 72 to 300 dpi) |
+| Compress: recommended, extreme or lossless | | PDF to images (PNG or JPG, 72 to 300 dpi) |
 | | | PDF to Word and Word to PDF |
 
 ## Your files stay on your computer

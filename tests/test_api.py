@@ -176,6 +176,65 @@ def test_garbage_is_reported_as_an_invalid_pdf(client):
     assert_error(response, 400, "ERR_INVALID_PDF")
 
 
+def scan(pages: int = 1) -> bytes:
+    """Letter pages of the approved 300 dpi scan (tests/fixtures/legibility_8pt.jpg)."""
+    from tests.test_compress import scan_pdf
+
+    return scan_pdf(pages)
+
+
+def test_compress_level_left_empty_is_recommended(client):
+    # The UI sends "" for an option left untouched.
+    source = scan()
+    empty = post(client, "compress", one("a.pdf", source), level="")
+    recommended = post(client, "compress", one("a.pdf", source), level="recommended")
+    assert empty.status_code == recommended.status_code == 200
+    assert len(empty.content) == len(recommended.content) <= 0.25 * len(source)
+
+
+def test_compress_lossless_keeps_the_images(client):
+    source = scan()
+    response = post(client, "compress", one("a.pdf", source), level="lossless")
+    assert response.status_code == 200
+    image = PdfReader(io.BytesIO(response.content)).pages[0]["/Resources"]["/XObject"]["/Im"]
+    assert image.get_object()["/Width"] == 2550
+
+
+def test_compress_never_returns_a_larger_file(client):
+    source = pdf(3)  # vector pages: nothing to recompress
+    response = post(client, "compress", one("a.pdf", source))
+    assert response.status_code == 200
+    assert len(response.content) <= len(source)
+
+
+def test_compress_level_must_be_known(client):
+    assert_error(
+        post(client, "compress", one("a.pdf", pdf(1)), level="low"), 400, "ERR_INVALID_INPUT"
+    )
+
+
+@pytest.mark.parametrize("case", ["no media box", "reversed box", "inherited tree", "cycle parent"])
+def test_compress_odd_structures_never_give_5xx(client, case):
+    from pypdf.generic import ArrayObject, FloatObject, NameObject
+
+    from tests import test_compress as engine
+
+    if case == "inherited tree":
+        source = engine._tree("deep_root")
+    elif case == "cycle parent":
+        source = engine._tree("cycle_parent")
+    else:
+        box = ArrayObject([FloatObject(v) for v in (144, 144, 0, 0)])
+        source = engine.one_page(engine.jpeg(), page_extra={"/MediaBox": box})
+        if case == "no media box":
+            writer = PdfWriter(clone_from=PdfReader(io.BytesIO(source)))
+            del writer.pages[0][NameObject("/MediaBox")]
+            out = io.BytesIO()
+            writer.write(out)
+            source = out.getvalue()
+    assert post(client, "compress", one("a.pdf", source)).status_code == 200
+
+
 # --- protect and unlock ---
 
 

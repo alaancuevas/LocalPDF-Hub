@@ -1,4 +1,4 @@
-"""Split, rotate and compress: tools that keep the pages and change little else."""
+"""Split and rotate: tools that keep the pages and change little else."""
 
 from collections.abc import Iterator
 from pathlib import Path
@@ -72,12 +72,3 @@ def rotate(path: Path, rotations: list[int], out_dir: Path) -> Path:
         if angle:
             page.rotate(angle)
     return write_pdf(writer, out_dir / f"{path.stem}_rotated.pdf")
-
-
-def compress(path: Path, out_dir: Path) -> Path:
-    writer = PdfWriter(clone_from=read_pdf(path))
-    for page in writer.pages:
-        check_deadline()
-        page.compress_content_streams()
-    writer.compress_identical_objects(remove_duplicates=True, remove_unreferenced=True)
-    return write_pdf(writer, out_dir / f"{path.stem}_compressed.pdf")
