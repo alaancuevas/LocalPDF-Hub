@@ -69,6 +69,48 @@ computer's IP address, then open `http://<that IP>:8000`. The app then
 accepts requests addressed to that IP as well, so turn it on only on a
 network you trust.
 
+## How it's built
+
+- **Backend**: Python with FastAPI and Uvicorn, listening only on
+  `127.0.0.1`. pypdf handles the PDF structure, pypdfium2 renders pages,
+  Pillow and pi-heif handle images and python-docx writes Word files.
+- **Interface**: plain HTML, CSS and JavaScript with a bundled pdf.js for
+  page previews; no framework and nothing loaded from other sites.
+- **Desktop app**: packaged with PyInstaller for Windows and macOS, with a
+  tray or menu bar icon.
+
+Some decisions that shaped the code:
+
+- **Loopback is not enough.** Any page open in the browser can send a
+  simple multipart POST to `127.0.0.1` without a CORS preflight. Unsafe
+  requests must therefore carry the launch token in a custom header, which
+  a foreign page cannot add without a preflight. The server also checks
+  `Host` against an allowlist, which defeats DNS rebinding, and `Origin`
+  (`src/localpdf_hub/security.py`).
+- **Cooperative time limits.** Python threads cannot be killed, so tools
+  check a deadline once per page, and each job takes as many units of a
+  counting semaphore as it weighs (`src/localpdf_hub/limits.py`).
+- **Compression never edits shared objects.** Only JPEG images listed in a
+  page's resources are re-encoded, always on a copy, because annotations or
+  pages that share a dictionary would otherwise draw the smaller image.
+  Unreachable objects are then removed by marking from the trailer, and any
+  data error redoes the job losslessly.
+- **Document metadata survives cloning.** pypdf's `clone_from` copies
+  `/Info` without remapping its indirect references, so a title could come
+  out empty or point at an unrelated object. The app rebuilds `/Info` from
+  the source after cloning (see [CHANGELOG.md](CHANGELOG.md)).
+
+## Tests
+
+- `python -m pytest -q` runs 170 test functions over the HTTP API,
+  compression, image conversion, watermarks and the request guard. Tests
+  that need Microsoft Word and pywin32 are marked `windows` and skipped by
+  default; run them with `python -m pytest -m windows`.
+- CI checks every pull request and push to `main`: Ruff and mypy on Linux,
+  then, on Windows and macOS, the test suite, the PyInstaller build and a
+  smoke test of the packaged app (request guard, a real merge, a watermark
+  with an embedded font and an AES-256 PDF that opens with its password).
+
 ## Build from source
 
 You need Python 3.12 and Node.js 22.
