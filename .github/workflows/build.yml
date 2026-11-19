@@ -20,7 +20,7 @@ jobs:
               dist/LocalPDF-Hub.exe
               dist/THIRD_PARTY_LICENSES-windows.txt
             artifact: LocalPDF-Hub-windows
-          - os: macos-14
+          - os: macos-15
             binary: dist/LocalPDF-Hub.app/Contents/MacOS/LocalPDF-Hub
             download: |
               dist/LocalPDF-Hub-macos-arm64.dmg
