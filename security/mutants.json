@@ -79,9 +79,34 @@
   {
     "id": "L18",
     "defense": "Security headers also cover the guard's own answers",
-    "file": "src/localpdf_hub/app.py",
-    "find": "    app.add_middleware(RequestGuard, token=token)\n    # Added last, so it is outermost and also covers the guard's own answers.\n    app.add_middleware(SecurityHeaders)\n",
-    "replace": "    app.add_middleware(SecurityHeaders)\n    app.add_middleware(RequestGuard, token=token)\n"
+    "edits": [
+      {
+        "file": "src/localpdf_hub/app.py",
+        "find": "return SecurityHeaders(super().build_middleware_stack())",
+        "replace": "return super().build_middleware_stack()"
+      },
+      {
+        "file": "src/localpdf_hub/app.py",
+        "find": "    app.add_middleware(RequestGuard, token=token)\n",
+        "replace": "    app.add_middleware(SecurityHeaders)\n    app.add_middleware(RequestGuard, token=token)\n"
+      }
+    ]
+  },
+  {
+    "id": "L39",
+    "defense": "Security headers also cover 500 answers for unhandled errors",
+    "edits": [
+      {
+        "file": "src/localpdf_hub/app.py",
+        "find": "return SecurityHeaders(super().build_middleware_stack())",
+        "replace": "return super().build_middleware_stack()"
+      },
+      {
+        "file": "src/localpdf_hub/app.py",
+        "find": "    app.add_middleware(RequestGuard, token=token)\n",
+        "replace": "    app.add_middleware(RequestGuard, token=token)\n    app.add_middleware(SecurityHeaders)\n"
+      }
+    ]
   },
   {
     "id": "L19",
@@ -101,8 +126,8 @@
     "id": "L21",
     "defense": "Interactive API docs and OpenAPI map not served",
     "file": "src/localpdf_hub/app.py",
-    "find": "FastAPI(docs_url=None, redoc_url=None, openapi_url=None, lifespan=_lifespan)",
-    "replace": "FastAPI(lifespan=_lifespan)"
+    "find": "(docs_url=None, redoc_url=None, openapi_url=None, lifespan=_lifespan)",
+    "replace": "(lifespan=_lifespan)"
   },
   {
     "id": "L22",

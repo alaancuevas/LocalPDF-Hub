@@ -189,6 +189,22 @@ def test_an_unexpected_error_is_answered_without_its_details(monkeypatch):
     assert body == {"code": "ERR_INTERNAL", "message": "Something went wrong on our side."}
 
 
+def test_an_unexpected_error_carries_the_security_headers(monkeypatch):
+    # Starlette builds this 500 in its outermost middleware; the headers must wrap even that.
+    from localpdf_hub.tools import pages
+
+    def fail(*_args):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(pages, "rotate", fail)
+    client = _trusted_client(raise_server_exceptions=False)
+    files = {"file": ("a.pdf", b"x", "application/pdf")}
+    response = client.post("/api/v1/pdf/rotate", files=files, data={"rotations": "90"})
+    assert response.status_code == 500
+    assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
+    assert response.headers["x-content-type-options"] == "nosniff"
+
+
 # --- job folders ---
 
 

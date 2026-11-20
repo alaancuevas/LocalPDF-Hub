@@ -13,6 +13,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pypdf.errors import FileNotDecryptedError, PdfReadError, PyPdfError
+from starlette.types import ASGIApp
 
 from localpdf_hub import __version__, api, errors, settings, workspace
 from localpdf_hub.errors import AppError
@@ -96,6 +97,18 @@ def _unsupported(request: Request, error: BaseException) -> JSONResponse:
     return _error(errors.UNSUPPORTED_PDF, "The PDF uses structures this tool cannot process.", 400)
 
 
+class _HardenedApp(FastAPI):
+    """FastAPI with the security headers outside the whole middleware stack.
+
+    add_middleware() places middleware inside Starlette's ServerErrorMiddleware,
+    so the 500 it answers for an unhandled error would go out without them.
+    Wrapping the built stack also covers the request guard's own answers.
+    """
+
+    def build_middleware_stack(self) -> ASGIApp:
+        return SecurityHeaders(super().build_middleware_stack())
+
+
 def create_app() -> FastAPI:
     # On Windows, mimetypes reads the registry, where some installs map .js to
     # text/plain; browsers then refuse to run the UI's ES modules.
@@ -103,12 +116,10 @@ def create_app() -> FastAPI:
     mimetypes.add_type("text/javascript", ".mjs")
     token = secrets.token_urlsafe(32)
     # The interactive docs would publish a map of every endpoint to any local page.
-    app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, lifespan=_lifespan)
+    app = _HardenedApp(docs_url=None, redoc_url=None, openapi_url=None, lifespan=_lifespan)
     # No CORSMiddleware on purpose: the UI is served from this same origin,
     # and approving preflights is what would let a foreign page send the token.
     app.add_middleware(RequestGuard, token=token)
-    # Added last, so it is outermost and also covers the guard's own answers.
-    app.add_middleware(SecurityHeaders)
     app.include_router(api.router)
 
     @app.exception_handler(AppError)
