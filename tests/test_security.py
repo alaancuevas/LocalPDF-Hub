@@ -1,6 +1,7 @@
 """Request guard behaviour that the HTTP test client cannot show."""
 
 import asyncio
+import io
 import re
 
 import pytest
@@ -205,3 +206,22 @@ def test_each_job_gets_its_own_folder():
     first, second = workspace.new_job_dir(), workspace.new_job_dir()
     assert first != second
     assert first.parent == second.parent == settings.TEMP_DIR
+
+
+def _pdf() -> bytes:
+    from pypdf import PdfWriter
+
+    writer = PdfWriter()
+    writer.add_blank_page(width=200, height=200)
+    out = io.BytesIO()
+    writer.write(out)
+    return out.getvalue()
+
+
+def test_a_job_folder_is_removed_after_the_answer():
+    from localpdf_hub import settings
+
+    files = {"file": ("a.pdf", _pdf(), "application/pdf")}
+    response = _trusted_client().post("/api/v1/pdf/compress", files=files)
+    assert response.status_code == 200
+    assert list(settings.TEMP_DIR.iterdir()) == []
