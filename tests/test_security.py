@@ -181,3 +181,13 @@ def test_an_unexpected_error_is_answered_without_its_details(monkeypatch):
     assert response.status_code == 500
     body = response.json()
     assert body == {"code": "ERR_INTERNAL", "message": "Something went wrong on our side."}
+
+
+# --- job folders ---
+
+
+def test_an_upload_name_keeps_only_its_last_part():
+    from localpdf_hub.workspace import safe_name
+
+    assert safe_name("../../etc/passwd.pdf") == "passwd.pdf"
+    assert safe_name("C:\\Users\\me\\report.pdf") == "report.pdf"
