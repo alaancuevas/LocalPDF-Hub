@@ -114,3 +114,7 @@ def test_the_policy_keeps_forms_on_this_server():
 
 def test_responses_are_not_sniffed():
     assert _client().get("/").headers["x-content-type-options"] == "nosniff"
+
+
+def test_responses_send_no_referrer():
+    assert _client().get("/").headers["referrer-policy"] == "no-referrer"
