@@ -2,7 +2,9 @@
 
 import asyncio
 import io
+import os
 import re
+import time
 
 import pytest
 from fastapi.testclient import TestClient
@@ -244,3 +246,17 @@ def test_a_job_folder_is_removed_when_the_tool_fails(monkeypatch):
     assert len(made) == 1
     assert not made[0].exists()
     assert list(settings.TEMP_DIR.iterdir()) == []
+
+
+def test_stale_job_folders_are_swept_and_recent_ones_kept():
+    from localpdf_hub import settings, workspace
+
+    settings.TEMP_DIR.mkdir(parents=True, exist_ok=True)
+    old, recent = settings.TEMP_DIR / "old", settings.TEMP_DIR / "recent"
+    old.mkdir()
+    recent.mkdir()
+    past = time.time() - settings.STALE_AFTER_S - 60
+    os.utime(old, (past, past))
+    assert workspace.sweep_stale() == 1
+    assert not old.exists()
+    assert recent.exists()
