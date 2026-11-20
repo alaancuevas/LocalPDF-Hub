@@ -4,7 +4,9 @@ import asyncio
 import io
 import os
 import re
+import runpy
 import time
+import types
 
 import pytest
 from fastapi.testclient import TestClient
@@ -260,3 +262,23 @@ def test_stale_job_folders_are_swept_and_recent_ones_kept():
     assert workspace.sweep_stale() == 1
     assert not old.exists()
     assert recent.exists()
+
+
+@pytest.mark.parametrize("lan", [None, "", "  "], ids=["unset", "empty", "blank"])
+def test_the_server_listens_only_on_this_computer_by_default(monkeypatch, lan):
+    from localpdf_hub import desktop, settings
+
+    if lan is None:
+        monkeypatch.delenv("LOCALPDF_LAN", raising=False)
+    else:
+        monkeypatch.setenv("LOCALPDF_LAN", lan)
+    # Settings as a fresh start would read them, without touching the loaded module.
+    fresh = types.SimpleNamespace(**runpy.run_path(settings.__file__))
+    monkeypatch.setattr(desktop, "settings", fresh)
+    binds = []
+    monkeypatch.setattr(desktop.uvicorn, "run", lambda *_args, **kwargs: binds.append(kwargs))
+    monkeypatch.setattr(desktop.webbrowser, "open", lambda _url: None)
+    monkeypatch.setattr(desktop, "_setup_logging", lambda: None)
+    monkeypatch.setattr(desktop, "_run_tray", lambda: None)
+    desktop.main()
+    assert binds[0]["host"] == "127.0.0.1"
