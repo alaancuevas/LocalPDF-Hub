@@ -97,3 +97,7 @@ def test_the_guards_own_refusals_carry_the_security_headers():
     response = _client().post("/api/v1/pdf/compress", files={"file": ("a.pdf", b"x")})
     assert response.status_code == 403
     assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
+
+
+def test_the_policy_blocks_plugins():
+    assert "object-src 'none'" in _client().get("/").headers["content-security-policy"]
