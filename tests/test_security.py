@@ -191,3 +191,9 @@ def test_an_upload_name_keeps_only_its_last_part():
 
     assert safe_name("../../etc/passwd.pdf") == "passwd.pdf"
     assert safe_name("C:\\Users\\me\\report.pdf") == "report.pdf"
+
+
+def test_an_upload_name_loses_characters_some_systems_refuse():
+    from localpdf_hub.workspace import safe_name
+
+    assert safe_name('re:po*rt?"<>|.pdf') == "re_po_rt_____.pdf"
