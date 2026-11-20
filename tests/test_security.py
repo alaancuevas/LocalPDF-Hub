@@ -197,3 +197,11 @@ def test_an_upload_name_loses_characters_some_systems_refuse():
     from localpdf_hub.workspace import safe_name
 
     assert safe_name('re:po*rt?"<>|.pdf') == "re_po_rt_____.pdf"
+
+
+def test_each_job_gets_its_own_folder():
+    from localpdf_hub import settings, workspace
+
+    first, second = workspace.new_job_dir(), workspace.new_job_dir()
+    assert first != second
+    assert first.parent == second.parent == settings.TEMP_DIR
