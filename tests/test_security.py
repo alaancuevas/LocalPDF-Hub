@@ -101,3 +101,8 @@ def test_the_guards_own_refusals_carry_the_security_headers():
 
 def test_the_policy_blocks_plugins():
     assert "object-src 'none'" in _client().get("/").headers["content-security-policy"]
+
+
+def test_the_policy_fixes_the_base_url():
+    # An injected <base> tag would otherwise send the page's relative requests elsewhere.
+    assert "base-uri 'none'" in _client().get("/").headers["content-security-policy"]
