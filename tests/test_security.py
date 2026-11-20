@@ -2,6 +2,7 @@
 
 import asyncio
 
+import pytest
 from fastapi.testclient import TestClient
 
 from localpdf_hub.app import create_app
@@ -118,3 +119,21 @@ def test_responses_are_not_sniffed():
 
 def test_responses_send_no_referrer():
     assert _client().get("/").headers["referrer-policy"] == "no-referrer"
+
+
+@pytest.mark.parametrize("foreign", ["https://evil.example", "http://localhost:3000"])
+def test_another_origin_gets_no_cors_approval(foreign):
+    # Approving it would let a foreign page read index.html, and with it the token.
+    client = _client()
+    preflight = client.options(
+        "/api/v1/pdf/compress",
+        headers={
+            "Origin": foreign,
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "x-localpdf-token",
+        },
+    )
+    page = client.get("/", headers={"Origin": foreign})
+    assert preflight.status_code == 403
+    assert "access-control-allow-origin" not in preflight.headers
+    assert "access-control-allow-origin" not in page.headers
