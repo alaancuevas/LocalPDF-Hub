@@ -110,3 +110,7 @@ def test_the_policy_fixes_the_base_url():
 
 def test_the_policy_keeps_forms_on_this_server():
     assert "form-action 'self'" in _client().get("/").headers["content-security-policy"]
+
+
+def test_responses_are_not_sniffed():
+    assert _client().get("/").headers["x-content-type-options"] == "nosniff"
