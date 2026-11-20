@@ -1,0 +1,234 @@
+[
+  {
+    "id": "L02",
+    "defense": "Launch token required on unsafe requests",
+    "file": "src/localpdf_hub/security.py",
+    "find": "if not hmac.compare_digest(token.encode(), self.token.encode()):",
+    "replace": "if False:"
+  },
+  {
+    "id": "L06",
+    "defense": "Only GET and HEAD skip the token check",
+    "file": "src/localpdf_hub/security.py",
+    "find": "SAFE_METHODS = frozenset({\"GET\", \"HEAD\"})",
+    "replace": "SAFE_METHODS = frozenset({\"GET\", \"HEAD\", \"POST\"})"
+  },
+  {
+    "id": "L07",
+    "defense": "Declared Content-Length over the limit gets 413",
+    "file": "src/localpdf_hub/security.py",
+    "find": "        if too_large:\n",
+    "replace": "        if False:\n"
+  },
+  {
+    "id": "L10",
+    "defense": "A refused oversized body is not read",
+    "file": "src/localpdf_hub/security.py",
+    "find": "if not too_large:\n                await _drain",
+    "replace": "if True:\n                await _drain"
+  },
+  {
+    "id": "L11",
+    "defense": "CSP default-src 'self'",
+    "file": "src/localpdf_hub/security.py",
+    "find": "\"default-src 'self'\",",
+    "replace": "\"default-src *\","
+  },
+  {
+    "id": "L12",
+    "defense": "CSP frame-ancestors 'none'",
+    "file": "src/localpdf_hub/security.py",
+    "find": "        \"frame-ancestors 'none'\",\n",
+    "replace": ""
+  },
+  {
+    "id": "L13",
+    "defense": "CSP object-src 'none'",
+    "file": "src/localpdf_hub/security.py",
+    "find": "        \"object-src 'none'\",\n",
+    "replace": ""
+  },
+  {
+    "id": "L14",
+    "defense": "CSP base-uri 'none'",
+    "file": "src/localpdf_hub/security.py",
+    "find": "        \"base-uri 'none'\",\n",
+    "replace": ""
+  },
+  {
+    "id": "L15",
+    "defense": "CSP form-action 'self'",
+    "file": "src/localpdf_hub/security.py",
+    "find": "        \"form-action 'self'\",\n",
+    "replace": ""
+  },
+  {
+    "id": "L16",
+    "defense": "X-Content-Type-Options: nosniff",
+    "file": "src/localpdf_hub/security.py",
+    "find": "                    (b\"x-content-type-options\", b\"nosniff\"),\n",
+    "replace": ""
+  },
+  {
+    "id": "L17",
+    "defense": "Referrer-Policy: no-referrer",
+    "file": "src/localpdf_hub/security.py",
+    "find": "                    (b\"referrer-policy\", b\"no-referrer\"),\n",
+    "replace": ""
+  },
+  {
+    "id": "L18",
+    "defense": "Security headers also cover the guard's own answers",
+    "file": "src/localpdf_hub/app.py",
+    "find": "    app.add_middleware(RequestGuard, token=token)\n    # Added last, so it is outermost and also covers the guard's own answers.\n    app.add_middleware(SecurityHeaders)\n",
+    "replace": "    app.add_middleware(SecurityHeaders)\n    app.add_middleware(RequestGuard, token=token)\n"
+  },
+  {
+    "id": "L19",
+    "defense": "No CORS approval for other origins",
+    "file": "src/localpdf_hub/app.py",
+    "find": "    app.include_router(api.router)\n",
+    "replace": "    from fastapi.middleware.cors import CORSMiddleware\n    app.add_middleware(CORSMiddleware, allow_origins=[\"*\"], allow_methods=[\"*\"], allow_headers=[\"*\"])\n    app.include_router(api.router)\n"
+  },
+  {
+    "id": "L20",
+    "defense": "Launch token is random on every start",
+    "file": "src/localpdf_hub/app.py",
+    "find": "token = secrets.token_urlsafe(32)",
+    "replace": "token = \"localpdf-token\""
+  },
+  {
+    "id": "L21",
+    "defense": "Interactive API docs and OpenAPI map not served",
+    "file": "src/localpdf_hub/app.py",
+    "find": "FastAPI(docs_url=None, redoc_url=None, openapi_url=None, lifespan=_lifespan)",
+    "replace": "FastAPI(lifespan=_lifespan)"
+  },
+  {
+    "id": "L22",
+    "defense": "Unreadable PDF answered with a fixed message",
+    "file": "src/localpdf_hub/app.py",
+    "find": "return _error(errors.INVALID_PDF, \"The PDF could not be read.\", 400)",
+    "replace": "return _error(errors.INVALID_PDF, f\"The PDF could not be read: {error}\", 400)"
+  },
+  {
+    "id": "L23",
+    "defense": "Unexpected errors answered without details",
+    "file": "src/localpdf_hub/app.py",
+    "find": "        logger.exception(\"Unhandled error\", exc_info=error)\n        return _error(errors.INTERNAL, \"Something went wrong on our side.\", 500)\n\n    @app.get(\"/health\")",
+    "replace": "        logger.exception(\"Unhandled error\", exc_info=error)\n        return _error(errors.INTERNAL, f\"Something went wrong on our side: {error!r}\", 500)\n\n    @app.get(\"/health\")"
+  },
+  {
+    "id": "L24",
+    "defense": "Upload name reduced to its last path component",
+    "file": "src/localpdf_hub/workspace.py",
+    "find": "base = Path((name or \"\").replace(\"\\\\\", \"/\")).name",
+    "replace": "base = (name or \"\").replace(\"\\\\\", \"/\")"
+  },
+  {
+    "id": "L25",
+    "defense": "Unsafe characters in upload names replaced",
+    "file": "src/localpdf_hub/workspace.py",
+    "find": "base = _UNSAFE.sub(\"_\", base).strip(\" .\")",
+    "replace": "base = base.strip(\" .\")"
+  },
+  {
+    "id": "L26",
+    "defense": "Each job gets its own folder",
+    "file": "src/localpdf_hub/workspace.py",
+    "find": "return Path(tempfile.mkdtemp(dir=settings.TEMP_DIR))",
+    "replace": "return settings.TEMP_DIR"
+  },
+  {
+    "id": "L27",
+    "defense": "Job folder removed after the answer",
+    "file": "src/localpdf_hub/api.py",
+    "find": "        background=BackgroundTask(workspace.remove, job_dir),\n",
+    "replace": ""
+  },
+  {
+    "id": "L28",
+    "defense": "Job folder removed when the tool fails",
+    "file": "src/localpdf_hub/api.py",
+    "find": "        workspace.remove(job_dir)\n        raise",
+    "replace": "        raise"
+  },
+  {
+    "id": "L29",
+    "defense": "Stale job folders swept",
+    "file": "src/localpdf_hub/workspace.py",
+    "find": "shutil.rmtree(entry) if entry.is_dir() else entry.unlink()",
+    "replace": "None"
+  },
+  {
+    "id": "L30",
+    "defense": "Server listens on loopback unless LAN is asked for",
+    "file": "src/localpdf_hub/settings.py",
+    "find": "HOST = \"0.0.0.0\" if LAN_IP else \"127.0.0.1\"",
+    "replace": "HOST = \"0.0.0.0\""
+  },
+  {
+    "id": "L31",
+    "defense": "Page limit per job",
+    "file": "src/localpdf_hub/limits.py",
+    "find": "    if total > settings.MAX_PAGES:",
+    "replace": "    if False:"
+  },
+  {
+    "id": "L32",
+    "defense": "Image count limit per job",
+    "file": "src/localpdf_hub/limits.py",
+    "find": "    if total > settings.MAX_IMAGES:",
+    "replace": "    if False:"
+  },
+  {
+    "id": "L33",
+    "defense": "Result size limit",
+    "file": "src/localpdf_hub/limits.py",
+    "find": "    if total > settings.MAX_RESULT_BYTES:",
+    "replace": "    if False:"
+  },
+  {
+    "id": "L34",
+    "defense": "Job deadline",
+    "file": "src/localpdf_hub/limits.py",
+    "find": "if deadline is not None and time.monotonic() >= deadline:",
+    "replace": "if False:"
+  },
+  {
+    "id": "L35",
+    "defense": "Job gate caps concurrent heavy work",
+    "file": "src/localpdf_hub/limits.py",
+    "find": "            self._cond.wait_for(lambda: self.in_use + weight <= self.capacity)\n",
+    "replace": ""
+  },
+  {
+    "id": "L36",
+    "defense": "Image pixel cap read from the header",
+    "file": "src/localpdf_hub/tools/images_pdf.py",
+    "find": "if image.width * image.height > settings.MAX_RENDER_PIXELS:",
+    "replace": "if False:"
+  },
+  {
+    "id": "L37",
+    "defense": "Compress pixel budget",
+    "file": "src/localpdf_hub/tools/compress.py",
+    "find": "if spent >= settings.COMPRESS_PIXEL_BUDGET:",
+    "replace": "if False:"
+  },
+  {
+    "id": "L38",
+    "defense": "Compress work cap on the object walk",
+    "file": "src/localpdf_hub/tools/compress.py",
+    "find": "if self.work > settings.COMPRESS_MAX_WORK:",
+    "replace": "if False:"
+  },
+  {
+    "id": "LC",
+    "defense": "CONTROL: log text only, no test should notice",
+    "file": "src/localpdf_hub/app.py",
+    "find": "logger.warning(\"Unsupported PDF (%s) on %s\"",
+    "replace": "logger.warning(\"Unsupported PDF [control] (%s) on %s\"",
+    "control": true
+  }
+]

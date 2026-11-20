@@ -28,3 +28,6 @@ Thumbs.db
 .env
 .claude/
 .ruff_cache/
+
+# Output of security/mutate.py
+security/results/
