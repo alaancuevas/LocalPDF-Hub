@@ -282,3 +282,17 @@ def test_the_server_listens_only_on_this_computer_by_default(monkeypatch, lan):
     monkeypatch.setattr(desktop, "_run_tray", lambda: None)
     desktop.main()
     assert binds[0]["host"] == "127.0.0.1"
+
+
+# --- limits ---
+
+
+def test_a_job_past_its_deadline_is_stopped(monkeypatch):
+    # Through the API: the job opens its deadline and the tool checks it on every page.
+    from localpdf_hub import settings
+
+    monkeypatch.setattr(settings, "JOB_TIMEOUT_S", 0)
+    files = {"file": ("a.pdf", _pdf(), "application/pdf")}
+    response = _trusted_client().post("/api/v1/pdf/split", files=files, data={"pages": "1"})
+    assert response.status_code == 503
+    assert response.json()["code"] == "ERR_TIMEOUT"
