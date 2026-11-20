@@ -2,6 +2,9 @@
 
 import asyncio
 
+from fastapi.testclient import TestClient
+
+from localpdf_hub.app import create_app
 from localpdf_hub.security import RequestGuard
 
 
@@ -78,3 +81,19 @@ def test_an_upload_with_the_token_over_the_limit_is_also_refused_unread(monkeypa
     asyncio.run(RequestGuard(app, "token")(scope, receive, send))
     assert read == []
     assert sent[0]["status"] == 413
+
+
+# --- through the whole app ---
+
+ORIGIN = "http://127.0.0.1:8000"
+
+
+def _client(**kwargs) -> TestClient:
+    return TestClient(create_app(), base_url=ORIGIN, **kwargs)
+
+
+def test_the_guards_own_refusals_carry_the_security_headers():
+    # SecurityHeaders wraps RequestGuard, so the guard's refusals are covered too.
+    response = _client().post("/api/v1/pdf/compress", files={"file": ("a.pdf", b"x")})
+    assert response.status_code == 403
+    assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
