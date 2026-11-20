@@ -137,3 +137,8 @@ def test_another_origin_gets_no_cors_approval(foreign):
     assert preflight.status_code == 403
     assert "access-control-allow-origin" not in preflight.headers
     assert "access-control-allow-origin" not in page.headers
+
+
+@pytest.mark.parametrize("path", ["/docs", "/redoc", "/openapi.json"])
+def test_the_api_map_is_not_published(path):
+    assert _client().get(path).status_code == 404
