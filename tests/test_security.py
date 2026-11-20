@@ -5,6 +5,7 @@ import io
 import os
 import re
 import runpy
+import threading
 import time
 import types
 
@@ -296,3 +297,21 @@ def test_a_job_past_its_deadline_is_stopped(monkeypatch):
     response = _trusted_client().post("/api/v1/pdf/split", files=files, data={"pages": "1"})
     assert response.status_code == 503
     assert response.json()["code"] == "ERR_TIMEOUT"
+
+
+def test_the_job_gate_holds_a_job_that_does_not_fit():
+    from localpdf_hub.limits import JobGate
+
+    gate = JobGate(2)
+    light, heavy = threading.Event(), threading.Event()
+
+    def job(weight, entered):
+        with gate.slot(weight):
+            entered.set()
+
+    with gate.slot(1):
+        threading.Thread(target=job, args=(1, light), daemon=True).start()
+        threading.Thread(target=job, args=(2, heavy), daemon=True).start()
+        assert light.wait(5)
+        assert not heavy.wait(0.5)
+    assert heavy.wait(5)
