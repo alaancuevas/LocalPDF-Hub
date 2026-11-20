@@ -61,12 +61,29 @@ def make_copy() -> Path:
     return target
 
 
+def edits_of(mutant: dict) -> list[dict]:
+    """A mutant is one replacement, or several under "edits" when a defense spans places."""
+    return mutant.get("edits") or [mutant]
+
+
 def check_finds(copy: Path, mutants: list[dict]) -> None:
     for mutant in mutants:
-        text = (copy / mutant["file"]).read_text(encoding="utf-8")
-        count = text.count(mutant["find"])
-        if count != 1:
-            sys.exit(f"{mutant['id']}: find text occurs {count} times in {mutant['file']}")
+        for edit in edits_of(mutant):
+            text = (copy / edit["file"]).read_text(encoding="utf-8")
+            count = text.count(edit["find"])
+            if count != 1:
+                sys.exit(f"{mutant['id']}: find text occurs {count} times in {edit['file']}")
+
+
+def apply(copy: Path, mutant: dict) -> dict[Path, str]:
+    """Writes the mutant into the copy and returns the originals to restore."""
+    originals: dict[Path, str] = {}
+    for edit in edits_of(mutant):
+        target = copy / edit["file"]
+        originals.setdefault(target, target.read_text(encoding="utf-8"))
+        text = target.read_text(encoding="utf-8")
+        target.write_text(text.replace(edit["find"], edit["replace"], 1), encoding="utf-8")
+    return originals
 
 
 def run_tests(copy: Path, paths: list[str], log: Path) -> str:
@@ -116,9 +133,7 @@ def main() -> int:
         args.out.mkdir(parents=True, exist_ok=True)
         results = []
         for mutant in mutants:
-            target = copy / mutant["file"]
-            original = target.read_text(encoding="utf-8")
-            target.write_text(original.replace(mutant["find"], mutant["replace"], 1), "utf-8")
+            originals = apply(copy, mutant)
             row = {"id": mutant["id"], "defense": mutant["defense"]}
             row["control"] = bool(mutant.get("control"))
             started = time.monotonic()
@@ -128,7 +143,8 @@ def main() -> int:
                     row[scope] = {"status": run_tests(copy, paths, log)}
                     row[scope]["failed"] = failing_tests(log)
             finally:
-                target.write_text(original, encoding="utf-8")
+                for target, original in originals.items():
+                    target.write_text(original, encoding="utf-8")
             row["seconds"] = round(time.monotonic() - started, 1)
             results.append(row)
             statuses = " ".join(f"{s}={row[s]['status']}" for s in SCOPES)
