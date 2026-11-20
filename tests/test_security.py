@@ -166,3 +166,18 @@ def test_an_unreadable_pdf_gets_a_fixed_message(monkeypatch):
     files = {"file": ("a.pdf", b"x", "application/pdf")}
     response = _trusted_client().post("/api/v1/pdf/rotate", files=files, data={"rotations": "90"})
     assert response.json() == {"code": "ERR_INVALID_PDF", "message": "The PDF could not be read."}
+
+
+def test_an_unexpected_error_is_answered_without_its_details(monkeypatch):
+    from localpdf_hub.tools import pages
+
+    def fail(*_args):
+        raise RuntimeError("/Users/someone/private/report.pdf")
+
+    monkeypatch.setattr(pages, "rotate", fail)
+    client = _trusted_client(raise_server_exceptions=False)
+    files = {"file": ("a.pdf", b"x", "application/pdf")}
+    response = client.post("/api/v1/pdf/rotate", files=files, data={"rotations": "90"})
+    assert response.status_code == 500
+    body = response.json()
+    assert body == {"code": "ERR_INTERNAL", "message": "Something went wrong on our side."}
