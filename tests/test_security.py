@@ -1,6 +1,7 @@
 """Request guard behaviour that the HTTP test client cannot show."""
 
 import asyncio
+import re
 
 import pytest
 from fastapi.testclient import TestClient
@@ -142,3 +143,26 @@ def test_another_origin_gets_no_cors_approval(foreign):
 @pytest.mark.parametrize("path", ["/docs", "/redoc", "/openapi.json"])
 def test_the_api_map_is_not_published(path):
     assert _client().get(path).status_code == 404
+
+
+def _trusted_client(**kwargs) -> TestClient:
+    client = _client(**kwargs)
+    page = client.get("/").text
+    token = re.search(r'<meta name="localpdf-token" content="([^"]+)"', page).group(1)
+    client.headers.update({"X-LocalPDF-Token": token, "Origin": ORIGIN})
+    return client
+
+
+def test_an_unreadable_pdf_gets_a_fixed_message(monkeypatch):
+    # What pypdf says about the file stays out of the answer.
+    from pypdf.errors import PdfReadError
+
+    from localpdf_hub.tools import pages
+
+    def fail(*_args):
+        raise PdfReadError("xref at /Users/someone/private/report.pdf")
+
+    monkeypatch.setattr(pages, "rotate", fail)
+    files = {"file": ("a.pdf", b"x", "application/pdf")}
+    response = _trusted_client().post("/api/v1/pdf/rotate", files=files, data={"rotations": "90"})
+    assert response.json() == {"code": "ERR_INVALID_PDF", "message": "The PDF could not be read."}
