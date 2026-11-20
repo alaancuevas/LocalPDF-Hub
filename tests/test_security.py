@@ -106,3 +106,7 @@ def test_the_policy_blocks_plugins():
 def test_the_policy_fixes_the_base_url():
     # An injected <base> tag would otherwise send the page's relative requests elsewhere.
     assert "base-uri 'none'" in _client().get("/").headers["content-security-policy"]
+
+
+def test_the_policy_keeps_forms_on_this_server():
+    assert "form-action 'self'" in _client().get("/").headers["content-security-policy"]
