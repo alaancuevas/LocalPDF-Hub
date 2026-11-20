@@ -225,3 +225,22 @@ def test_a_job_folder_is_removed_after_the_answer():
     response = _trusted_client().post("/api/v1/pdf/compress", files=files)
     assert response.status_code == 200
     assert list(settings.TEMP_DIR.iterdir()) == []
+
+
+def test_a_job_folder_is_removed_when_the_tool_fails(monkeypatch):
+    from localpdf_hub import settings, workspace
+
+    made = []
+    real = workspace.new_job_dir
+
+    def recorded():
+        made.append(real())
+        return made[-1]
+
+    monkeypatch.setattr(workspace, "new_job_dir", recorded)
+    files = {"file": ("a.pdf", b"not a pdf", "application/pdf")}
+    response = _trusted_client().post("/api/v1/pdf/compress", files=files)
+    assert response.json()["code"] == "ERR_INVALID_PDF"
+    assert len(made) == 1
+    assert not made[0].exists()
+    assert list(settings.TEMP_DIR.iterdir()) == []
