@@ -757,3 +757,20 @@ def test_the_largest_page_sets_the_dpi(tmp_path):
 def test_a_shared_dict_on_an_unusable_page_stays_everywhere(tmp_path):
     source = _shared_dict({"/UserUnit": NumberObject(-1)})
     assert streams(run(tmp_path, source)) == streams(source)
+
+
+def test_the_pixel_budget_stops_recompressing(tmp_path, monkeypatch):
+    # One pixel of budget: the first image is recompressed, the second is left as it was.
+    monkeypatch.setattr(settings, "COMPRESS_PIXEL_BUDGET", 1)
+    originals = [jpeg(seed=seed) for seed in (1, 2)]
+    writer = PdfWriter()
+    for data in originals:
+        ref = image_stream(writer, data)
+        page = writer.add_blank_page(144, 144)
+        page[NameObject("/Resources")] = DictionaryObject(
+            {NameObject("/XObject"): DictionaryObject({NameObject("/Im"): ref})}
+        )
+        page[NameObject("/Contents")] = contents(writer)
+    result = streams(run(tmp_path, write(writer)))
+    assert len(result) == 2
+    assert sum(stream in originals for stream in result) == 1
