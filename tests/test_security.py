@@ -365,3 +365,57 @@ def test_a_request_marked_as_from_another_site_is_refused(site):
     headers = {"Sec-Fetch-Site": site}
     response = _trusted_client().post("/api/v1/pdf/compress", files=files, headers=headers)
     assert response.status_code == 403
+
+
+def test_a_chunked_upload_is_cut_at_the_limit(monkeypatch):
+    # No Content-Length to check first: the bytes are counted while the app reads them.
+    from localpdf_hub import settings
+
+    monkeypatch.setattr(settings, "MAX_UPLOAD_BYTES", 10)
+    chunks = [b"a" * 8, b"b" * 8, b"c" * 8]
+    seen, sent = [], []
+
+    async def app(scope, receive, send):
+        while True:
+            message = await receive()
+            seen.append((message["type"], len(message.get("body", b""))))
+            if message["type"] == "http.disconnect" or not message.get("more_body"):
+                break
+        await send({"type": "http.response.start", "status": 200, "headers": []})
+        await send({"type": "http.response.body", "body": b""})
+
+    async def receive():
+        body = chunks.pop(0)
+        return {"type": "http.request", "body": body, "more_body": bool(chunks)}
+
+    async def send(message):
+        sent.append(message)
+
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "path": "/api/v1/pdf/compress",
+        "headers": [(b"host", b"127.0.0.1:8000"), (b"x-localpdf-token", b"token")],
+    }
+    asyncio.run(RequestGuard(app, "token")(scope, receive, send))
+    assert [m["status"] for m in sent if m["type"] == "http.response.start"] == [413]
+    # The chunk that crosses the limit never reaches the app.
+    assert seen == [("http.request", 8), ("http.disconnect", 0)]
+
+
+def test_a_chunked_upload_through_the_app_is_cut_at_the_limit(monkeypatch):
+    from localpdf_hub import settings
+
+    monkeypatch.setattr(settings, "MAX_UPLOAD_BYTES", 1024)
+    head = (
+        b'--x\r\nContent-Disposition: form-data; name="file"; filename="a.pdf"\r\n'
+        b"Content-Type: application/pdf\r\n\r\n"
+    )
+    parts = [head, *(b"a" * 512 for _ in range(8)), b"\r\n--x--\r\n"]
+    response = _trusted_client().post(
+        "/api/v1/pdf/compress",
+        content=iter(parts),
+        headers={"Content-Type": "multipart/form-data; boundary=x"},
+    )
+    assert response.status_code == 413
+    assert list(settings.TEMP_DIR.iterdir()) == []
