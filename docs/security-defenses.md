@@ -4,24 +4,24 @@ Every control in LocalPDF Hub that keeps another site, another program or a host
 
 Line numbers match the code as of the last change to this file.
 
-**Status:** *tested* = a test fails without it · *not measured* = no mutant yet · *open* = known to have no test · *not mutated* = see the note.
+**Status:** *tested* = a test fails without it · *not mutated* = no mutant, for the reason given.
 
 ## Request guard and launch token
 
 | Id | Defense | Where | What it prevents | Test that watches it | Status |
 |---|---|---|---|---|---|
-| L01 | `Host` must be a loopback name (or the LAN IP when LAN access is on) | `src/localpdf_hub/security.py:119` | DNS rebinding: a hostile domain resolved to 127.0.0.1 reading `index.html` and its token | none | not measured |
+| L01 | `Host` must be a loopback name (or the LAN IP when LAN access is on) | `src/localpdf_hub/security.py:119` | DNS rebinding: a hostile domain resolved to 127.0.0.1 reading `index.html` and its token | `tests/test_security.py::test_a_foreign_host_name_is_refused` | tested |
 | L02 | Unsafe requests must carry the launch token | `security.py:173-175` | Another page in the browser triggering a tool (CSRF) | `tests/test_api.py::test_requests_without_the_token_are_refused` | tested |
 | L03 | The token is compared in constant time (`hmac.compare_digest`) | `security.py:174` | Guessing the token from how long the comparison takes | none | not mutated: a timing difference has no reliable unit test |
-| L04 | `Origin`, when sent, must be this server | `security.py:176-178` | A request from another site that somehow carries the token | none | not measured |
-| L05 | `Sec-Fetch-Site`, when sent, must be `same-origin` or `none` | `security.py:179-180` | Cross-site requests, as marked by the browser | none | not measured |
+| L04 | `Origin`, when sent, must be this server | `security.py:176-178` | A request from another site that somehow carries the token | `tests/test_security.py::test_another_origin_is_refused_even_with_the_token` | tested |
+| L05 | `Sec-Fetch-Site`, when sent, must be `same-origin` or `none` | `security.py:179-180` | Cross-site requests, as marked by the browser | `tests/test_security.py::test_a_request_marked_as_from_another_site_is_refused` | tested |
 | L06 | Only GET and HEAD skip the token check | `security.py:26`, `127` | CSRF through POST, which every tool uses, or any other method | `tests/test_api.py::test_requests_without_the_token_are_refused` | tested |
 | L07 | A declared `Content-Length` over the limit gets 413 without being read, token or not | `security.py:135-137` | Filling disk or memory with one request | `tests/test_security.py::test_an_upload_with_the_token_over_the_limit_is_also_refused_unread` | tested |
-| L08 | A chunked body is counted while parsed and cut at the limit | `security.py:148-160` | The same, with no `Content-Length` to check | none | not measured |
-| L09 | Draining a refused body stops at the limit | `security.py:89` | A request without token keeping the server reading forever | none | not measured |
+| L08 | A chunked body is counted while parsed and cut at the limit | `security.py:148-160` | The same, with no `Content-Length` to check | `tests/test_security.py::test_a_chunked_upload_is_cut_at_the_limit` and `test_a_chunked_upload_through_the_app_is_cut_at_the_limit` | tested |
+| L09 | Draining a refused body stops at the limit | `security.py:89` | A request without token keeping the server reading forever | `tests/test_security.py::test_draining_a_refused_body_stops_at_the_limit` | tested |
 | L10 | A refused body over the limit is not read at all | `security.py:128` | Reading attacker data that will be thrown away | `tests/test_security.py::test_an_upload_over_the_limit_is_refused_unread` | tested |
 | L19 | No CORS approval for other origins | `src/localpdf_hub/app.py:120-121` | A foreign page reading `index.html`, and with it the token | `tests/test_security.py::test_another_origin_gets_no_cors_approval` | tested |
-| L20 | The token is random on every start | `app.py:117` | A token that could be predicted or reused | none | open |
+| L20 | The token is random on every start | `app.py:117` | A token that could be predicted or reused | `tests/test_security.py::test_the_launch_token_differs_between_starts_and_is_long` | tested |
 | L21 | No interactive docs or OpenAPI map | `app.py:118-119` | Publishing a map of every endpoint to any local page | `tests/test_security.py::test_the_api_map_is_not_published` | tested |
 | L30 | The server listens on loopback unless `LOCALPDF_LAN` is set | `src/localpdf_hub/settings.py:25-26` | Exposing the tools to the network by default | `tests/test_security.py::test_the_server_listens_only_on_this_computer_by_default` | tested |
 
@@ -72,5 +72,4 @@ Line numbers match the code as of the last change to this file.
 
 ## Known gaps
 
-- **L20** has no test yet: nothing fails if the token becomes a fixed string.
-- **L01, L04, L05, L08, L09** have no mutant yet, so whether a test watches them is not measured.
+- **L03** is not mutated. Replacing `hmac.compare_digest` with `==` changes only how long a comparison takes, and a unit test cannot measure that reliably.

@@ -1,0 +1,468 @@
+{
+  "note": "First measurement, at 43677d3, before any new test. L18 used the middleware order of that commit.",
+  "results": [
+    {
+      "id": "L02",
+      "defense": "Launch token required on unsafe requests",
+      "control": false,
+      "security": {
+        "status": "killed",
+        "failed": [
+          "FAILED tests/test_security.py::test_a_refused_upload_is_read_before_the_answer"
+        ]
+      },
+      "full": {
+        "status": "killed",
+        "failed": [
+          "FAILED tests/test_api.py::test_requests_without_the_token_are_refused - asser...",
+          "FAILED tests/test_security.py::test_a_refused_upload_is_read_before_the_answer"
+        ]
+      }
+    },
+    {
+      "id": "L06",
+      "defense": "Only GET and HEAD skip the token check",
+      "control": false,
+      "security": {
+        "status": "killed",
+        "failed": [
+          "FAILED tests/test_security.py::test_a_refused_upload_is_read_before_the_answer"
+        ]
+      },
+      "full": {
+        "status": "killed",
+        "failed": [
+          "FAILED tests/test_api.py::test_requests_without_the_token_are_refused - asser...",
+          "FAILED tests/test_security.py::test_a_refused_upload_is_read_before_the_answer"
+        ]
+      }
+    },
+    {
+      "id": "L07",
+      "defense": "Declared Content-Length over the limit gets 413",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "survived",
+        "failed": []
+      }
+    },
+    {
+      "id": "L10",
+      "defense": "A refused oversized body is not read",
+      "control": false,
+      "security": {
+        "status": "killed",
+        "failed": [
+          "FAILED tests/test_security.py::test_an_upload_over_the_limit_is_refused_unread"
+        ]
+      },
+      "full": {
+        "status": "killed",
+        "failed": [
+          "FAILED tests/test_security.py::test_an_upload_over_the_limit_is_refused_unread"
+        ]
+      }
+    },
+    {
+      "id": "L11",
+      "defense": "CSP default-src 'self'",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "killed",
+        "failed": [
+          "FAILED tests/test_api.py::test_every_response_carries_a_strict_content_security_policy"
+        ]
+      }
+    },
+    {
+      "id": "L12",
+      "defense": "CSP frame-ancestors 'none'",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "killed",
+        "failed": [
+          "FAILED tests/test_api.py::test_every_response_carries_a_strict_content_security_policy"
+        ]
+      }
+    },
+    {
+      "id": "L13",
+      "defense": "CSP object-src 'none'",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "survived",
+        "failed": []
+      }
+    },
+    {
+      "id": "L14",
+      "defense": "CSP base-uri 'none'",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "survived",
+        "failed": []
+      }
+    },
+    {
+      "id": "L15",
+      "defense": "CSP form-action 'self'",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "survived",
+        "failed": []
+      }
+    },
+    {
+      "id": "L16",
+      "defense": "X-Content-Type-Options: nosniff",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "survived",
+        "failed": []
+      }
+    },
+    {
+      "id": "L17",
+      "defense": "Referrer-Policy: no-referrer",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "survived",
+        "failed": []
+      }
+    },
+    {
+      "id": "L18",
+      "defense": "Security headers also cover the guard's own answers",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "survived",
+        "failed": []
+      }
+    },
+    {
+      "id": "L19",
+      "defense": "No CORS approval for other origins",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "survived",
+        "failed": []
+      }
+    },
+    {
+      "id": "L20",
+      "defense": "Launch token is random on every start",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "survived",
+        "failed": []
+      }
+    },
+    {
+      "id": "L21",
+      "defense": "Interactive API docs and OpenAPI map not served",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "survived",
+        "failed": []
+      }
+    },
+    {
+      "id": "L22",
+      "defense": "Unreadable PDF answered with a fixed message",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "survived",
+        "failed": []
+      }
+    },
+    {
+      "id": "L23",
+      "defense": "Unexpected errors answered without details",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "survived",
+        "failed": []
+      }
+    },
+    {
+      "id": "L24",
+      "defense": "Upload name reduced to its last path component",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "survived",
+        "failed": []
+      }
+    },
+    {
+      "id": "L25",
+      "defense": "Unsafe characters in upload names replaced",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "survived",
+        "failed": []
+      }
+    },
+    {
+      "id": "L26",
+      "defense": "Each job gets its own folder",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "survived",
+        "failed": []
+      }
+    },
+    {
+      "id": "L27",
+      "defense": "Job folder removed after the answer",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "survived",
+        "failed": []
+      }
+    },
+    {
+      "id": "L28",
+      "defense": "Job folder removed when the tool fails",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "survived",
+        "failed": []
+      }
+    },
+    {
+      "id": "L29",
+      "defense": "Stale job folders swept",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "survived",
+        "failed": []
+      }
+    },
+    {
+      "id": "L30",
+      "defense": "Server listens on loopback unless LAN is asked for",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "survived",
+        "failed": []
+      }
+    },
+    {
+      "id": "L31",
+      "defense": "Page limit per job",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "killed",
+        "failed": [
+          "FAILED tests/test_api.py::test_unlock_also_applies_the_page_limit - Assertion...",
+          "FAILED tests/test_api.py::test_page_limit_answers_413 - AssertionError: %PDF-1.3",
+          "FAILED tests/test_images_pdf.py::test_images_count_as_pages - AssertionError:..."
+        ]
+      }
+    },
+    {
+      "id": "L32",
+      "defense": "Image count limit per job",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "killed",
+        "failed": [
+          "FAILED tests/test_images_pdf.py::test_two_hundred_images_pass_and_one_more_does_not"
+        ]
+      }
+    },
+    {
+      "id": "L33",
+      "defense": "Result size limit",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "killed",
+        "failed": [
+          "FAILED tests/test_api.py::test_to_images_stops_at_the_result_limit - AssertionError: PK\u0003\u0004\u0014\u0000\u0000\u0000\b\u0000wst]��$�\u0006�\u0018\u0000�Y\u001b\u0000\f\u0000\u0000\u0000page_001.png��gTSQ��-� `�JQ\u0004�\b�;J/�w�`�R\u0004\u0004�\u0012\u0004齉�\u0000��\u0010�J�A4Q0\u0010:�H�~;���{�;�c8P\u0007&'��=�3�Z�X\u0003��TW���;w�JSC\r\u0002��\u0012�]\u0000��M0\u001e;w��9M5e�ܕ6\u0013�Mo�\u0007�\u0004�\u0010��#*�\u0003�$d\u0011�������b��\u001fN\u0004m��G��\u0019�A��~�����!����Sag~g�\t,ҳ���� ��Y�\u001a94��F\u0007������;��Vy���г�^Vk�lw\u001c�ڤ2\u001d\u0011��_ <\u001e-",
+          "FAILED tests/test_images_pdf.py::test_the_result_stops_at_its_byte_limit[images-to-pdf-fields0]",
+          "FAILED tests/test_images_pdf.py::test_the_result_stops_at_its_byte_limit[images-to-pdf-fields1]",
+          "FAILED tests/test_images_pdf.py::test_the_result_stops_at_its_byte_limit[merge-fields2]",
+          "FAILED tests/test_images_pdf.py::test_the_alpha_channel_counts_towards_the_byte_limit"
+        ]
+      }
+    },
+    {
+      "id": "L34",
+      "defense": "Job deadline",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "survived",
+        "failed": []
+      }
+    },
+    {
+      "id": "L35",
+      "defense": "Job gate caps concurrent heavy work",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "survived",
+        "failed": []
+      }
+    },
+    {
+      "id": "L36",
+      "defense": "Image pixel cap read from the header",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "killed",
+        "failed": [
+          "FAILED tests/test_images_pdf.py::test_too_many_pixels_is_refused_from_the_header[7100]"
+        ]
+      }
+    },
+    {
+      "id": "L37",
+      "defense": "Compress pixel budget",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "survived",
+        "failed": []
+      }
+    },
+    {
+      "id": "L38",
+      "defense": "Compress work cap on the object walk",
+      "control": false,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "killed",
+        "failed": [
+          "FAILED tests/test_compress.py::test_work_cap_falls_back_to_lossless - assert ..."
+        ]
+      }
+    },
+    {
+      "id": "LC",
+      "defense": "CONTROL: log text only, no test should notice",
+      "control": true,
+      "security": {
+        "status": "survived",
+        "failed": []
+      },
+      "full": {
+        "status": "survived",
+        "failed": []
+      }
+    }
+  ]
+}
