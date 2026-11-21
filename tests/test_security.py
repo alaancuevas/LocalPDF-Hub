@@ -344,3 +344,16 @@ def test_a_foreign_host_name_is_refused(host):
     response = TestClient(create_app(), base_url=f"http://{host}:8000").get("/")
     assert response.status_code == 400
     assert "localpdf-token" not in response.text
+
+
+@pytest.mark.parametrize(
+    "origin",
+    ["https://evil.example", "null", "http://127.0.0.1:9999", "http://127.0.0.1.evil.example"],
+)
+def test_another_origin_is_refused_even_with_the_token(origin):
+    client = _trusted_client()
+    files = {"file": ("a.pdf", _pdf(), "application/pdf")}
+    allowed = client.post("/api/v1/pdf/compress", files=files)
+    refused = client.post("/api/v1/pdf/compress", files=files, headers={"Origin": origin})
+    assert allowed.status_code == 200
+    assert refused.status_code == 403
