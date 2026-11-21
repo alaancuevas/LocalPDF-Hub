@@ -450,3 +450,15 @@ def test_draining_a_refused_body_stops_at_the_limit(monkeypatch):
     # Reading stops once past the limit: at most one chunk over it.
     assert 10 < 4 * len(reads) <= 10 + 4
     assert sent[0]["status"] == 403
+
+
+def test_the_launch_token_differs_between_starts_and_is_long():
+    # A token that repeats across launches, or a short one, could be reused or guessed by any
+    # page that saw it once. 32 random bytes give 43 URL-safe characters. Whether the bytes
+    # come from a secure source no test can tell; the S rules of ruff flag the random module.
+    tokens = []
+    for _ in range(2):
+        page = _client().get("/").text
+        tokens.append(re.search(r'<meta name="localpdf-token" content="([^"]+)"', page).group(1))
+    assert tokens[0] != tokens[1]
+    assert re.fullmatch(r"[A-Za-z0-9_-]{43,}", tokens[0])
