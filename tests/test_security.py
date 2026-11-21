@@ -419,3 +419,34 @@ def test_a_chunked_upload_through_the_app_is_cut_at_the_limit(monkeypatch):
     )
     assert response.status_code == 413
     assert list(settings.TEMP_DIR.iterdir()) == []
+
+
+def test_draining_a_refused_body_stops_at_the_limit(monkeypatch):
+    # A request without the token could otherwise keep the server reading an endless body.
+    from localpdf_hub import settings
+
+    monkeypatch.setattr(settings, "MAX_UPLOAD_BYTES", 10)
+    reads, sent = [], []
+
+    async def app(scope, receive, send):
+        raise AssertionError("a refused request must not reach the app")
+
+    async def receive():
+        reads.append(True)
+        if len(reads) > 50:
+            raise AssertionError("kept reading past the limit")
+        return {"type": "http.request", "body": b"a" * 4, "more_body": True}
+
+    async def send(message):
+        sent.append(message)
+
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "path": "/api/v1/pdf/compress",
+        "headers": [(b"host", b"127.0.0.1:8000")],
+    }
+    asyncio.run(RequestGuard(app, "token")(scope, receive, send))
+    # Reading stops once past the limit: at most one chunk over it.
+    assert 10 < 4 * len(reads) <= 10 + 4
+    assert sent[0]["status"] == 403
