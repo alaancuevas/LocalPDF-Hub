@@ -357,3 +357,11 @@ def test_another_origin_is_refused_even_with_the_token(origin):
     refused = client.post("/api/v1/pdf/compress", files=files, headers={"Origin": origin})
     assert allowed.status_code == 200
     assert refused.status_code == 403
+
+
+@pytest.mark.parametrize("site", ["cross-site", "same-site", "unknown"])
+def test_a_request_marked_as_from_another_site_is_refused(site):
+    files = {"file": ("a.pdf", _pdf(), "application/pdf")}
+    headers = {"Sec-Fetch-Site": site}
+    response = _trusted_client().post("/api/v1/pdf/compress", files=files, headers=headers)
+    assert response.status_code == 403
