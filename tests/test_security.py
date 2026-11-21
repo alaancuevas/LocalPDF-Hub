@@ -331,3 +331,16 @@ def test_the_job_gate_holds_a_job_that_does_not_fit():
         assert light.wait(5)
         assert not heavy.wait(0.5)
     assert heavy.wait(5)
+
+
+# --- request guard checks ---
+
+
+@pytest.mark.parametrize(
+    "host", ["evil.example", "evil.localhost", "127.0.0.1.evil.example", "localhost.evil.example"]
+)
+def test_a_foreign_host_name_is_refused(host):
+    # DNS rebinding: a hostile domain resolved to 127.0.0.1 must not get index.html and its token.
+    response = TestClient(create_app(), base_url=f"http://{host}:8000").get("/")
+    assert response.status_code == 400
+    assert "localpdf-token" not in response.text
