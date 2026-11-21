@@ -1,5 +1,40 @@
 [
   {
+    "id": "L01",
+    "defense": "Host must be a loopback name or the LAN IP",
+    "file": "src/localpdf_hub/security.py",
+    "find": "if _host_name(headers.get(\"host\", \"\")) not in _allowed_hosts():",
+    "replace": "if False:"
+  },
+  {
+    "id": "L04",
+    "defense": "Origin, when sent, must be this server",
+    "file": "src/localpdf_hub/security.py",
+    "find": "if origin is not None and origin not in _allowed_origins():",
+    "replace": "if False:"
+  },
+  {
+    "id": "L05",
+    "defense": "Sec-Fetch-Site, when sent, must be same-origin or none",
+    "file": "src/localpdf_hub/security.py",
+    "find": "return fetch_site is None or fetch_site in SAME_SITE_FETCH",
+    "replace": "return True"
+  },
+  {
+    "id": "L08",
+    "defense": "A chunked body is cut at the upload limit",
+    "file": "src/localpdf_hub/security.py",
+    "find": "if received > limit and not response_started:",
+    "replace": "if False:"
+  },
+  {
+    "id": "L09",
+    "defense": "Draining a refused body stops at the upload limit",
+    "file": "src/localpdf_hub/security.py",
+    "find": "while received <= limit:",
+    "replace": "while True:"
+  },
+  {
     "id": "L02",
     "defense": "Launch token required on unsafe requests",
     "file": "src/localpdf_hub/security.py",
